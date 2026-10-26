@@ -151,7 +151,7 @@
   }
   .live-tag{display:inline-block;background:#e7f4ec;color:var(--ok);border:1px solid #cde7d8;font-size:11px;border-radius:6px;padding:1px 8px;margin-left:6px}
 
-  /* ---------- ③④ chat ---------- */
+  /* ---------- ③ chat ---------- */
   #chatLog{display:flex;flex-direction:column;gap:10px;min-height:180px;max-height:420px;overflow-y:auto;padding:2px}
   .msg{max-width:88%;border-radius:10px;padding:8px 12px;font-size:13px;white-space:pre-wrap}
   .msg.iwata{align-self:flex-end;background:var(--navy);color:#fff;border-bottom-right-radius:3px}
@@ -264,7 +264,7 @@
   <button class="btn ghost" id="settingBtn">⚙ 設定</button>
 </header>
 
-<div id="netBanner">オフラインです。②検索・③AI回答・④候補生成はWi-Fi接続後に自動で発動します。文字起こしの編集・録音・カメラ確認はオフラインでも使えます。</div>
+<div id="netBanner">オフラインです。③AI回答・回答選択・④Google検索はWi-Fi接続後に使えます。文字起こしの編集・録音・カメラ確認はオフラインでも使えます。</div>
 
 <main>
   <!-- ① アジェンダ -->
@@ -294,24 +294,28 @@
     </div>
   </section>
 
-  <!-- ② AIサーチ -->
-  <section class="panel" id="secSearch" aria-label="AI検索">
-    <div class="panel-head"><span class="no">④</span>AIサーチ<span class="sub">REALTIME SEARCH</span><button class="exp" title="全画面で表示">⛶ 全画面</button></div>
+  <!-- ④ Google検索 -->
+  <section class="panel" id="secSearch" aria-label="Google検索">
+    <div class="panel-head"><span class="no">④</span>Google検索<span class="sub">GOOGLE SEARCH</span><button class="exp" title="全画面で表示">⛶ 全画面</button></div>
     <div class="panel-body">
-      <p class="hint">単語や記事の調べもの → 要約と出典を表示。Gemini APIキー（設定）があると Google検索で裏取りした結果を表示します。</p>
+      <p class="hint">調べたい語を入れて「Google検索」を押すと、別タブで検索結果が開きます。見つけた情報は下のメモに貼り付けて、③AI回答・回答選択へ送れます。</p>
       <div class="search-row">
         <input id="searchQuery" placeholder="例：地域企業 仕事体験 インターン 事例" />
-        <button class="btn primary" id="searchBtn">検索</button>
+        <button class="btn primary" id="searchBtn">Google検索</button>
       </div>
       <div class="result" id="searchResult">
-        <p class="empty">検索すると、ここに要約と出典が表示されます。</p>
+        <textarea id="searchMemo" rows="6" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.6;resize:vertical" placeholder="検索で見つけた情報・出典URLをここにメモ（貼り付け）"></textarea>
       </div>
-      <button class="btn" id="toChatBtn" disabled>この結果を③の会話へ送る</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn" id="toChatBtn" disabled>このメモを③AI回答・回答選択へ送る</button>
+        <button class="btn" id="summarizeBtn" disabled>メモをAIで要約して③へ</button>
+        <button class="btn" id="searchMemoClear">メモをクリア</button>
+      </div>
     </div>
   </section>
 
-  <!-- ③ AI回答 ／ ④ 回答選択 -->
-  <section class="panel" id="secChat" aria-label="AI回答と回答選択">
+  <!-- ③ AI回答・回答選択 -->
+  <section class="panel" id="secChat" aria-label="AI回答・回答選択">
     <div class="panel-head"><span class="no">③</span>AI回答・回答選択<span class="sub">AI CAST</span><button class="exp" title="全画面で表示">⛶ 全画面</button></div>
     <div class="panel-body">
       <div id="chatLog" aria-live="polite"></div>
@@ -338,7 +342,7 @@
   <section class="panel wide" id="secTranscript" aria-label="音声テキスト化">
     <div class="panel-head"><span class="no">②</span>音声テキスト化<span class="sub">LIVE TRANSCRIPT</span><button class="exp" title="全画面で表示">⛶ 全画面</button></div>
     <div class="panel-body tr-wrap">
-      <p class="hint">マイクからの音声をリアルタイムで文字起こしします。誤変換はこの欄で直接直してから③へ送るので、岩田さんの言葉がAIに正しく届いているか確認できます。</p>
+      <p class="hint">マイクからの音声をリアルタイムで文字起こしします。誤変換はこの欄で直接直してから③AI回答・回答選択へ送るので、岩田さんの言葉がAIに正しく届いているか確認できます。</p>
       <div class="tr-status">
         <button class="btn primary" id="trToggle">🎤 文字起こしを開始</button>
         <span class="pill" id="trPill">待機中</span>
@@ -348,8 +352,8 @@
       <textarea id="trText" placeholder="ここに岩田さんの発言が文字起こしされていきます。直接編集もできます。"></textarea>
       <div id="trInterim"></div>
       <div class="tr-ops">
-        <button class="btn" id="trSendAll">全文を③の会話へ送る</button>
-        <button class="btn" id="trSendSel">選択部分を③へ送る</button>
+        <button class="btn" id="trSendAll">全文を③AI回答・回答選択へ送る</button>
+        <button class="btn" id="trSendSel">選択部分を③AI回答・回答選択へ送る</button>
         <button class="btn" id="trClear" style="margin-left:auto">文字起こしをクリア</button>
       </div>
       <div class="tr-ops">
@@ -450,7 +454,7 @@ let state={
   agenda:[
     {id:1,title:'冒頭：今日のテーマと持ち帰り',minutes:2,memo:'',done:false,base:0,acc:0},
     {id:2,title:'現状確認：どこで採用が止まっているか',minutes:6,memo:'',done:false,base:0,acc:0},
-    {id:3,title:'AIサーチ：国内外の事例を確認',minutes:7,memo:'',done:false,base:0,acc:0},
+    {id:3,title:'Google検索：国内外の事例を確認',minutes:7,memo:'',done:false,base:0,acc:0},
     {id:4,title:'改善案を比較して、その場で直す',minutes:10,memo:'',done:false,base:0,acc:0},
     {id:5,title:'まとめ：まず取り組むこと3つ',minutes:5,memo:'',done:false,base:0,acc:0}
   ],
@@ -669,54 +673,34 @@ function extractSources(data){
   return out.filter((v,i,a)=>a.findIndex(x=>x.uri===v.uri)===i).slice(0,6);
 }
 
-/* ================= ② search ================= */
-let lastSearchText='';
-async function doSearch(){
+/* ================= ④ Google search ================= */
+function doSearch(){
   const q=$('searchQuery').value.trim();if(!q)return;
-  if(!navigator.onLine){alert('オフラインです。Wi-Fi接続後に検索できます');return;}
-  const box=$('searchResult');box.innerHTML='<p class="empty">検索中…</p>';$('searchBtn').disabled=true;
-  try{
-    if(!state.apiKey){
-      await new Promise(r=>setTimeout(r,400));
-      box.innerHTML='';
-      const c=document.createElement('div');c.className='card';
-      c.innerHTML='<h4>要約<span class="demo-tag">デモ表示</span></h4>';
-      const p=document.createElement('p');p.className='sum';
-      p.textContent='デモモードのため実検索は行っていません。⚙ 設定で Gemini APIキーを保存すると、Google検索で裏取りした要約と出典リンクがここに表示されます。\n\n入力された語: '+q;
-      c.appendChild(p);box.appendChild(c);
-      lastSearchText='';$('toChatBtn').disabled=true;return;
-    }
-    const sys='あなたは採用担当のリサーチ係。日本語で、入力された語について最新の公開情報を調査し、3〜5個の箇条書き要約を出す。各要約は簡潔に。推察と事実を混ぜない。情報が見つからない点は「確認できず」と書く。';
-    let data,usedTool=true;
-    try{data=await callGemini({systemInstruction:{parts:[{text:sys}]},contents:[{role:'user',parts:[{text:q}]}],tools:[{google_search:{}}]});}
-    catch(err){
-      if(/api 400/.test(String(err.message))){usedTool=false;data=await callGemini({systemInstruction:{parts:[{text:sys}]},contents:[{role:'user',parts:[{text:q}]}]});}
-      else throw err;
-    }
-    const text=extractText(data),srcs=extractSources(data);
-    box.innerHTML='';const c=document.createElement('div');c.className='card';
-    c.innerHTML='<h4>要約'+(usedTool?'<span class="live-tag">実検索</span>':'<span class="demo-tag">検索なし（AIの知識のみ）</span>')+'</h4>';
-    if(usedTool&&!srcs.length){const nn=document.createElement('p');nn.className='note';nn.textContent='※ Google検索の裏取りは得られませんでした（AIの知識による要約です）';c.appendChild(nn);}
-    const p=document.createElement('p');p.className='sum';p.textContent=text||'(要約を取得できませんでした)';c.appendChild(p);
-    if(srcs.length){const u=document.createElement('ul');u.className='src';
-      srcs.forEach((s,i)=>{const li=document.createElement('li');const n=document.createElement('span');n.className='srcno';n.textContent='['+(i+1)+'] ';
-        const a=document.createElement('a');a.href=s.uri;a.target='_blank';a.rel='noopener';a.textContent=s.title;li.append(n,a);u.appendChild(li);});
-      c.appendChild(u);}
-    box.appendChild(c);
-    lastSearchText='【②サーチ結果】質問: '+q+'\n'+text+(srcs.length?'\n出典: '+srcs.map(s=>s.uri).join(' , '):'');
-    $('toChatBtn').disabled=false;state.searches.unshift({q,text,at:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})});save();
-  }catch(e){box.innerHTML='';const c=document.createElement('div');c.className='card';
-    c.innerHTML='<h4>エラー</h4>';const p=document.createElement('p');p.className='sum';
-    p.textContent='検索に失敗しました: '+friendlyError(e.message)+'（詳細: '+e.message+'）';c.appendChild(p);box.appendChild(c);}
-  finally{$('searchBtn').disabled=false;}
+  const url='https://www.google.com/search?hl=ja&q='+encodeURIComponent(q);
+  const w=window.open(url,'_blank','noopener');
+  if(!w){alert('ポップアップがブロックされました。ブラウザの設定で、このページのポップアップを許可してください。');return;}
+  state.searches.unshift({q,text:'',at:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})});save();
 }
+function syncMemoBtn(){const e=!$('searchMemo').value.trim();$('toChatBtn').disabled=e;$('summarizeBtn').disabled=e||!navigator.onLine;}
 $('searchBtn').onclick=doSearch;
-$('searchQuery').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch();});
+$('searchQuery').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();doSearch();}});
+$('searchMemo').value=state.searchMemo||'';syncMemoBtn();
+$('searchMemo').addEventListener('input',syncMemoBtn);
+$('searchMemo').addEventListener('blur',()=>{state.searchMemo=$('searchMemo').value;save();});
+$('searchMemoClear').onclick=()=>{$('searchMemo').value='';state.searchMemo='';save();syncMemoBtn();};
+$('summarizeBtn').onclick=()=>{
+  const memo=$('searchMemo').value.trim();if(!memo)return;
+  const q=$('searchQuery').value.trim();
+  $('chatInput').value='【Google検索メモ】'+(q?'検索語: '+q+'\n':'')+memo+'\n→ このメモを、事実と推察を分けて3〜5個の箇条書きで要約してください。メモにない情報は足さないでください。';
+  sendChat();};
 $('toChatBtn').onclick=()=>{
-  const ta=$('chatInput');ta.value=(ta.value?ta.value+'\n':'')+lastSearchText+'\n→ これを踏まえて意見をください';
+  const memo=$('searchMemo').value.trim();if(!memo)return;
+  const q=$('searchQuery').value.trim();
+  const ta=$('chatInput');
+  ta.value=(ta.value?ta.value+'\n':'')+'【Google検索メモ】'+(q?'検索語: '+q+'\n':'')+memo+'\n→ これを踏まえて意見をください';
   ta.focus();};
 
-/* ================= ③ chat / ④ candidates ================= */
+/* ================= ③ AI回答・回答選択 (chat / candidates) ================= */
 function pushMsg(role,text,adopted,sys){
   state.chat.push({role,text,adopted:!!adopted,sys:!!sys});save();renderChat();
 }
@@ -773,7 +757,7 @@ async function genCandidates(){
     await new Promise(r=>setTimeout(r,500));wait.remove();
     const box=document.createElement('div');box.className='cands';
     const demo=[['接点の整理','（デモ）APIキー設定後は、ここに実際の3案が表示されます。この欄は動作確認用のプレースホルダです。'],
-                ['学生への聞き取り','（デモ）採用ボタンを押すと、その案がAI発言として会話に確定します（④回答選択）。'],
+                ['学生への聞き取り','（デモ）採用ボタンを押すと、その案がAI発言として会話に確定します（③回答選択）。'],
                 ['事例調査','（デモ）不採用の案は薄くなって残ります。']];
     demo.forEach(d=>{const c=document.createElement('div');c.className='cand dim';
       c.innerHTML='<div class="ch"><span class="ang">'+esc(d[0])+'</span></div>';
@@ -807,7 +791,7 @@ function renderCandidateBox(cands){
     const b=document.createElement('button');b.className='mini done-b';b.textContent='✔ 採用してAI発言にする';
     b.onclick=()=>{box.querySelectorAll('.cand').forEach(x=>x.classList.add('dim'));el.classList.remove('dim');el.classList.add('adopted');
       pushMsg('model',c.text,true);box.remove();if($('ttsChk').checked)speak(c.text);};
-    const b2=document.createElement('button');b2.className='mini';b2.textContent='③へ送る';
+    const b2=document.createElement('button');b2.className='mini';b2.textContent='入力欄へ送る';
     b2.onclick=()=>{$('chatInput').value=c.text;$('chatInput').focus();};
     ops.append(b,b2);el.appendChild(ops);box.appendChild(el);
   });
@@ -930,7 +914,7 @@ function applyNet(){
   $('netStat').classList.toggle('off',!on);
   $('netStatTxt').textContent=on?'ONLINE':'OFFLINE';
   $('netBanner').classList.toggle('show',!on);
-  ['searchBtn','sendBtn','candBtn','withSearch'].forEach(id=>{$(id).disabled=!on;});
+  ['searchBtn','sendBtn','candBtn','withSearch'].forEach(id=>{$(id).disabled=!on;});syncMemoBtn();
 }
 window.addEventListener('online',applyNet);
 window.addEventListener('offline',applyNet);
@@ -972,7 +956,7 @@ $('exportBtn').onclick=()=>{
   state.agenda.forEach(a=>{L.push((a.done?'✔':'□')+' '+a.title+'（'+a.minutes+'分／使用'+fmt(itemElapsed(a))+'）'+(a.memo?'\n   メモ: '+a.memo:''));});
   L.push('');L.push('■ 脱線メモ');
   if(state.parked.length)state.parked.forEach(p=>L.push('・'+p.t+'（'+p.at+'）'));else L.push('(なし)');
-  L.push('');L.push('■ 検索記録');
+  L.push('');L.push('■ 検索記録（Google検索）');
   if(state.searches.length)state.searches.forEach(s=>L.push('['+s.at+'] '+s.q));else L.push('(なし)');
   L.push('');L.push('■ 音声文字起こし');
   L.push(state.trText?state.trText:'(なし)');
