@@ -395,6 +395,10 @@
       <option value="gemini-2.5-pro">Gemini 2.5 Pro（高精度）</option>
       <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite（高速・軽量）</option>
     </select>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <button class="btn" id="testBtn">接続テスト</button>
+      <span id="testOut" class="hint" style="margin:0"></span>
+    </div>
     <div class="ops">
       <button class="btn" id="dlgClose">閉じる</button>
       <button class="btn primary" id="dlgSave">保存</button>
@@ -627,12 +631,28 @@ $('onairBtn').onclick=()=>{
 /* ================= Gemini API ================= */
 const API_BASE='https://generativelanguage.googleapis.com/v1beta/models/';
 function sysCast(){return 'あなたはビデオポッドキャスト「ローカル採用会議」（地域企業の採用課題と改善提案、新卒採用中心）のAIキャストです。岩田さんの地域新卒採用の議論に応答します。ルール:1)簡潔に、結論から。2)事実は出典を、推察は「推察」と明示。3)最後に「この地域・この会社の規模でどう実行するか」を一文で添える。4)採用成果を断定しない。';}
+function geminiUrl(){return API_BASE+state.model+':generateContent';}
+async function geminiFetch(key,body){
+  const res=await fetch(geminiUrl(),{method:'POST',
+    headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body)});
+  if(!res.ok){const t=await res.text();throw new Error('api '+res.status+' '+t.slice(0,300));}
+  return res.json();
+}
 async function callGemini(body){
   if(!state.apiKey)throw new Error('nokey');
-  const res=await fetch(API_BASE+state.model+':generateContent?key='+encodeURIComponent(state.apiKey),{
-    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-  if(!res.ok){const t=await res.text();throw new Error('api '+res.status+' '+t.slice(0,200));}
-  return res.json();
+  return geminiFetch(state.apiKey,body);
+}
+function friendlyError(msg){
+  const m=String(msg);
+  if(m==='nokey')return 'APIキーが未設定です。⚙ 設定で保存してください。';
+  if(/Failed to fetch|NetworkError|network/i.test(m))return 'ネットワークに接続できません。Wi-Fi回線か、ブラウザの拡張機能（広告ブロッカー等）がAPI通信を止めている可能性があります。';
+  if(/ACCESS_TOKEN_TYPE_UNSUPPORTED/i.test(m))return 'このキーの種類がGemini APIで受け付けられていません。AI Studio（aistudio.google.com）で、プロジェクトに紐づく新しいキーを作り直してください。Vertex AI（Google Cloud）用のキーは使えません。';
+  if(/API_KEY_INVALID|API key not valid|api 401|UNAUTHENTICATED|invalid authentication/i.test(m))return 'APIキーが認証されませんでした。キーの前後に空白や改行が入っていないか、AI Studioで発行したキーか確認してください。';
+  if(/SERVICE_DISABLED|has not been used|is disabled/i.test(m))return 'このキーのプロジェクトで「Generative Language API」が有効でありません。AI Studioで発行したキーを使ってください。';
+  if(/PERMISSION_DENIED|api 403|restricted|referer/i.test(m))return 'キーにアクセス制限（HTTPリファラ制限・API制限など）がかかっている可能性があります。ローカル（file://）で開いている場合はリファラ制限に引っかかるため、制限を外すか localhost 配信にしてください。';
+  if(/api 404|not found|is not supported/i.test(m))return '選択中のモデルがこのキーで使えません。⚙ 設定でモデルを変更してお試しください。';
+  if(/quota|api 429|RESOURCE_EXHAUSTED/i.test(m))return '利用上限（クォータ）に達しました。しばらく待つか、別のモデル（flash-lite など）をお試しください。無料枠が0のモデルもあります。';
+  return m;
 }
 function extractText(data){const c=data?.candidates?.[0];return c?.content?.parts?.map(p=>p.text||'').join('').trim()||'';}
 function extractSources(data){
@@ -660,10 +680,16 @@ async function doSearch(){
       lastSearchText='';$('toChatBtn').disabled=true;return;
     }
     const sys='あなたは採用担当のリサーチ係。日本語で、入力された語について最新の公開情報を調査し、3〜5個の箇条書き要約を出す。各要約は簡潔に。推察と事実を混ぜない。情報が見つからない点は「確認できず」と書く。';
-    const data=await callGemini({systemInstruction:{parts:[{text:sys}]},contents:[{role:'user',parts:[{text:q}]}],tools:[{google_search:{}}]});
+    let data,usedTool=true;
+    try{data=await callGemini({systemInstruction:{parts:[{text:sys}]},contents:[{role:'user',parts:[{text:q}]}],tools:[{google_search:{}}]});}
+    catch(err){
+      if(/api 400/.test(String(err.message))){usedTool=false;data=await callGemini({systemInstruction:{parts:[{text:sys}]},contents:[{role:'user',parts:[{text:q}]}]});}
+      else throw err;
+    }
     const text=extractText(data),srcs=extractSources(data);
     box.innerHTML='';const c=document.createElement('div');c.className='card';
-    c.innerHTML='<h4>要約<span class="live-tag">実検索</span></h4>';
+    c.innerHTML='<h4>要約'+(usedTool?'<span class="live-tag">実検索</span>':'<span class="demo-tag">検索なし（AIの知識のみ）</span>')+'</h4>';
+    if(usedTool&&!srcs.length){const nn=document.createElement('p');nn.className='note';nn.textContent='※ Google検索の裏取りは得られませんでした（AIの知識による要約です）';c.appendChild(nn);}
     const p=document.createElement('p');p.className='sum';p.textContent=text||'(要約を取得できませんでした)';c.appendChild(p);
     if(srcs.length){const u=document.createElement('ul');u.className='src';
       srcs.forEach((s,i)=>{const li=document.createElement('li');const n=document.createElement('span');n.className='srcno';n.textContent='['+(i+1)+'] ';
@@ -674,7 +700,7 @@ async function doSearch(){
     $('toChatBtn').disabled=false;state.searches.unshift({q,text,at:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})});save();
   }catch(e){box.innerHTML='';const c=document.createElement('div');c.className='card';
     c.innerHTML='<h4>エラー</h4>';const p=document.createElement('p');p.className='sum';
-    p.textContent='検索に失敗しました: '+e.message+'（APIキー・モデル・通信を確認してください）';c.appendChild(p);box.appendChild(c);}
+    p.textContent='検索に失敗しました: '+friendlyError(e.message)+'（詳細: '+e.message+'）';c.appendChild(p);box.appendChild(c);}
   finally{$('searchBtn').disabled=false;}
 }
 $('searchBtn').onclick=doSearch;
@@ -726,7 +752,7 @@ async function aiReply(body){
       wait.remove();pushMsg('model','（デモ応答）これは動作確認用の固定文です。⚙ 設定で Gemini APIキーを保存すると、実際のAI回答がここに表示されます。',false,true);return;}
     const data=await callGemini(body);const text=extractText(data);
     wait.remove();pushMsg('model',text||'（回答を取得できませんでした）',false,!text);
-  }catch(e){wait.remove();pushMsg('model','（エラー: '+e.message+'）',false,true);}
+  }catch(e){wait.remove();pushMsg('model','（エラー: '+friendlyError(e.message)+'）',false,true);}
 }
 async function genCandidates(){
   if(!navigator.onLine){alert('オフラインです。Wi-Fi接続後に生成できます');return;}
@@ -760,7 +786,7 @@ async function genCandidates(){
       const rb=document.createElement('button');rb.className='mini';rb.textContent='↻ もう一度生成';
       rb.onclick=()=>{wait.remove();genCandidates();};wait.appendChild(rb);return;}
     wait.remove();renderCandidateBox(cands);
-  }catch(e){wait.remove();pushMsg('model','（エラー: '+e.message+'）',false,true);}
+  }catch(e){wait.remove();pushMsg('model','（エラー: '+friendlyError(e.message)+'）',false,true);}
 }
 function renderCandidateBox(cands){
   const log=$('chatLog');const box=document.createElement('div');box.className='cands';
@@ -951,7 +977,19 @@ $('exportBtn').onclick=()=>{
 };
 $('settingBtn').onclick=()=>{$('keyInput').value=state.apiKey;$('modelSel').value=state.model;$('settingDlg').showModal();};
 $('dlgClose').onclick=()=>$('settingDlg').close();
-$('dlgSave').onclick=()=>{state.apiKey=$('keyInput').value.trim();state.model=$('modelSel').value;save();updateFoot();$('settingDlg').close();};
+$('dlgSave').onclick=()=>{state.apiKey=$('keyInput').value.replace(/\s+/g,'');state.model=$('modelSel').value;save();updateFoot();$('settingDlg').close();};
+$('testBtn').onclick=async()=>{
+  const key=$('keyInput').value.trim().replace(/\s+/g,'');
+  const model=$('modelSel').value;
+  if(!key){$('testOut').textContent='キーを入力してから押してください';return;}
+  $('testOut').textContent='テスト中…';
+  const saved=state.model;state.model=model;
+  try{
+    const data=await geminiFetch(key,{contents:[{role:'user',parts:[{text:'OK と返してください'}]}]});
+    $('testOut').textContent='✓ 接続OK（'+model+'）'+(extractText(data)?'':'（応答は空）');
+  }catch(e){$('testOut').textContent='✗ '+friendlyError(e.message);}
+  finally{state.model=saved;}
+};
 function updateFoot(){
   $('footMode').textContent=state.apiKey?'接続状態：Gemini API 接続済み（実検索・実回答が有効）':'接続状態：デモモード（設定で Gemini APIキーを保存すると実検索・実回答が有効）';
   $('footModel').textContent='モデル: '+state.model;
