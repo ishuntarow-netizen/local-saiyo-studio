@@ -391,10 +391,16 @@
     <input id="keyInput" type="password" placeholder="AIza..." />
     <label for="modelSel" style="font-size:12px">モデル</label>
     <select id="modelSel">
-      <option value="gemini-2.5-flash">Gemini 2.5 Flash（標準・推奨）</option>
-      <option value="gemini-2.5-pro">Gemini 2.5 Pro（高精度）</option>
-      <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite（高速・軽量）</option>
+      <option value="gemini-3.8-flash">Gemini 3.8 Flash（標準・推奨）</option>
+      <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite（高速・軽量）</option>
+      <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
+      <option value="gemini-2.5-flash">Gemini 2.5 Flash（旧：新規キーでは使えないことがあります）</option>
+      <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite（旧）</option>
     </select>
+    <div style="display:flex;align-items:center;gap:10px;margin:6px 0 10px">
+      <button class="btn" id="modelListBtn" type="button">このキーで使えるモデルを取得</button>
+      <span id="modelListOut" class="hint" style="margin:0"></span>
+    </div>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
       <button class="btn" id="testBtn">接続テスト</button>
       <span id="testOut" class="hint" style="margin:0"></span>
@@ -440,7 +446,7 @@ const store={ok:false,get(){try{const r=localStorage.getItem(LS_KEY);return r?JS
   size:0,
   set(v){try{const j=JSON.stringify(v);localStorage.setItem(LS_KEY,j);this.size=j.length;this.ok=true}catch(e){this.ok=false}}};
 let state={
-  apiKey:'', model:'gemini-2.5-flash',
+  apiKey:'', model:'gemini-3.8-flash',
   agenda:[
     {id:1,title:'冒頭：今日のテーマと持ち帰り',minutes:2,memo:'',done:false,base:0,acc:0},
     {id:2,title:'現状確認：どこで採用が止まっているか',minutes:6,memo:'',done:false,base:0,acc:0},
@@ -450,7 +456,8 @@ let state={
   ],
   activeId:null, onair:false, onairStart:null, parked:[], chat:[], searches:[]
 };
-(function load(){const s=store.get();if(s&&s.agenda)state=Object.assign(state,s);})();
+(function load(){const s=store.get();if(s&&s.agenda)state=Object.assign(state,s);
+  if(!state.modelMigrated){state.modelMigrated=true;if(/^gemini-2\.5/.test(state.model||''))state.model='gemini-3.8-flash';}})();
 let warnedSize=false,warnedFail=false;
 function save(){
   store.set(state);
@@ -650,7 +657,7 @@ function friendlyError(msg){
   if(/API_KEY_INVALID|API key not valid|api 401|UNAUTHENTICATED|invalid authentication/i.test(m))return 'APIキーが認証されませんでした。キーの前後に空白や改行が入っていないか、AI Studioで発行したキーか確認してください。';
   if(/SERVICE_DISABLED|has not been used|is disabled/i.test(m))return 'このキーのプロジェクトで「Generative Language API」が有効でありません。AI Studioで発行したキーを使ってください。';
   if(/PERMISSION_DENIED|api 403|restricted|referer/i.test(m))return 'キーにアクセス制限（HTTPリファラ制限・API制限など）がかかっている可能性があります。ローカル（file://）で開いている場合はリファラ制限に引っかかるため、制限を外すか localhost 配信にしてください。';
-  if(/api 404|not found|is not supported/i.test(m))return '選択中のモデルがこのキーで使えません。⚙ 設定でモデルを変更してお試しください。';
+  if(/api 404|NOT_FOUND|no longer available|not found|is not supported/i.test(m))return '選択中のモデルはこのキーで使えません（Gemini 2.5系は新しいキー・プロジェクトでは利用不可のことがあります）。⚙ 設定で「Gemini 3.8 Flash」か「3.5 Flash-Lite」を選ぶか、「このキーで使えるモデルを取得」を押してください。';
   if(/quota|api 429|RESOURCE_EXHAUSTED/i.test(m))return '利用上限（クォータ）に達しました。しばらく待つか、別のモデル（flash-lite など）をお試しください。無料枠が0のモデルもあります。';
   return m;
 }
@@ -975,7 +982,30 @@ $('exportBtn').onclick=()=>{
   L.push('');L.push('■ 会話ログ');state.chat.forEach(m=>L.push((m.role==='user'?'岩田: ':'AI: ')+m.text));
   dl(new Blob([L.join('\n')],{type:'text/plain;charset=utf-8'}),fileNameBase()+'_'+stamp()+'.txt');
 };
-$('settingBtn').onclick=()=>{$('keyInput').value=state.apiKey;$('modelSel').value=state.model;$('settingDlg').showModal();};
+function setModelSel(v){const sel=$('modelSel');
+  if(![...sel.options].some(o=>o.value===v)){const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);}
+  sel.value=v;}
+$('settingBtn').onclick=()=>{$('keyInput').value=state.apiKey;setModelSel(state.model);$('modelListOut').textContent='';$('settingDlg').showModal();};
+$('modelListBtn').onclick=async()=>{
+  const key=$('keyInput').value.replace(/\s+/g,'');
+  if(!key){$('modelListOut').textContent='キーを入力してから押してください';return;}
+  $('modelListOut').textContent='取得中…';
+  try{
+    const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',{headers:{'x-goog-api-key':key}});
+    if(!res.ok){const t=await res.text();throw new Error('api '+res.status+' '+t.slice(0,300));}
+    const j=await res.json();
+    const names=(j.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent'))
+      .map(m=>String(m.name).replace(/^models\//,''))
+      .filter(n=>/^gemini-/.test(n)&&!/(tts|image|live|embedding|robotics|transcribe|omni|computer-use|native-audio|banana|translate)/.test(n));
+    if(!names.length){$('modelListOut').textContent='使えるモデルが見つかりませんでした';return;}
+    const rank=n=>(/^gemini-3\.8-flash$/.test(n)?0:/flash-lite$/.test(n)?1:/flash$/.test(n)?2:3);
+    names.sort((a,b)=>rank(a)-rank(b)||b.localeCompare(a));
+    const cur=$('modelSel').value;const sel=$('modelSel');sel.innerHTML='';
+    names.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);});
+    sel.value=names.includes(cur)?cur:names[0];
+    $('modelListOut').textContent='✓ '+names.length+'件取得。選んで「接続テスト」→「保存」してください';
+  }catch(e){$('modelListOut').textContent='✗ '+friendlyError(e.message);}
+};
 $('dlgClose').onclick=()=>$('settingDlg').close();
 $('dlgSave').onclick=()=>{state.apiKey=$('keyInput').value.replace(/\s+/g,'');state.model=$('modelSel').value;save();updateFoot();$('settingDlg').close();};
 $('testBtn').onclick=async()=>{
