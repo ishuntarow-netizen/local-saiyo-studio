@@ -1,0 +1,963 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ローカル採用会議スタジオ｜岩田専用 進行コンソール</title>
+<style>
+  :root{
+    --ink:#16283a; --sub:#5b7186; --line:#d7e2ec;
+    --navy:#0f3d5c; --navy2:#14507a; --blue:#1d6fa5; --blue-soft:#e7f1f9;
+    --paper:#f2f6fa; --panel:#ffffff;
+    --rec:#d43d3d; --amber:#b97a12; --ok:#2e7d4f;
+    --mono:ui-monospace,"SF Mono",Consolas,"Courier New",monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:"Hiragino Kaku Gothic ProN","Noto Sans CJK JP","Yu Gothic",Meiryo,sans-serif;
+    color:var(--ink); background:var(--paper); font-size:14px; line-height:1.65;
+  }
+  button{font-family:inherit}
+  input,textarea{font-family:inherit;color:var(--ink)}
+  a{color:var(--blue)}
+  :focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+  /* ---------- top console ---------- */
+  header{
+    background:linear-gradient(180deg,var(--navy) 0%,var(--navy2) 100%);
+    color:#fff; padding:10px 18px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    position:sticky; top:0; z-index:20; box-shadow:0 2px 8px rgba(15,61,92,.35);
+  }
+  .brand{display:flex;flex-direction:column;min-width:220px}
+  .brand b{font-size:16px;letter-spacing:.02em}
+  .brand span{font-size:10.5px;color:#bcd8ec;letter-spacing:.14em}
+  .onair{
+    display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.28);
+    border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:6px 12px;
+  }
+  .onair .dot{width:10px;height:10px;border-radius:50%;background:#5c707f}
+  .onair.live .dot{background:var(--rec);animation:pulse 1.2s infinite}
+  @keyframes pulse{0%{opacity:1}50%{opacity:.25}100%{opacity:1}}
+  .onair .clock{font-family:var(--mono);font-size:18px;letter-spacing:.06em;min-width:74px;text-align:center}
+  .onair .label{font-size:10px;color:#bcd8ec;letter-spacing:.2em}
+  .btn{
+    border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:7px;
+    padding:6px 12px;font-size:12.5px;cursor:pointer;
+  }
+  .btn:hover{border-color:var(--blue);color:var(--blue)}
+  .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+  .btn.primary:hover{background:#17598a;color:#fff}
+  .btn.ghost{background:transparent;border-color:rgba(255,255,255,.45);color:#fff}
+  .btn.ghost:hover{background:rgba(255,255,255,.12);color:#fff}
+  .btn.tiny{padding:2px 9px;font-size:11px}
+  .brand .nrow{display:flex;align-items:center;gap:8px}
+  .pill.mut{background:#fdf3e2;border-color:#eeddc0;color:var(--amber)}
+  .cambox video{width:100%;max-width:420px;border:1px solid var(--line);border-radius:8px;background:#0b1622;display:block}
+  .cambox.mirror video{transform:scaleX(-1)}
+  header .spacer{flex:1}
+  .ep{display:flex;align-items:center;gap:8px}
+  .ep input{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;padding:6px 10px;width:250px;font-size:12.5px}
+  .ep input::placeholder{color:#a9c6da}
+
+  /* ---------- studio grid ---------- */
+  main{
+    display:grid;grid-template-columns:1fr;gap:14px;
+    padding:14px;max-width:1080px;margin:0 auto;align-items:start;
+  }
+  #secAgenda{order:1}#secTranscript{order:2}#secChat{order:3}#secSearch{order:4}#secCam{order:5}
+  @media (min-width:1101px){
+    main{grid-template-columns:repeat(4,1fr);max-width:1560px}
+    #secAgenda{grid-column:1;grid-row:1}
+    #secTranscript{grid-column:2;grid-row:1}
+    #secChat{grid-column:3;grid-row:1}
+    #secSearch{grid-column:4;grid-row:1}
+    #secCam{grid-column:1/-1;grid-row:2}
+  }
+  section.panel{
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    box-shadow:0 1px 3px rgba(22,40,58,.06);
+  }
+  .panel-head{
+    display:flex;align-items:center;gap:8px;background:var(--navy);color:#fff;
+    padding:8px 12px;font-weight:700;font-size:13.5px;letter-spacing:.03em;
+  }
+  .panel-head .no{
+    background:rgba(255,255,255,.16);border-radius:5px;padding:0 7px;font-size:12px;
+    font-family:var(--mono);
+  }
+  .panel-head .sub{font-weight:400;font-size:11px;color:#bcd8ec;margin-left:auto;letter-spacing:.08em}
+  .panel-body{padding:12px}
+  .hint{font-size:11.5px;color:var(--sub);margin:0 0 8px}
+
+  /* ---------- ① agenda ---------- */
+  .agenda-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .chip{
+    background:var(--blue-soft);color:var(--navy);border-radius:999px;
+    font-size:11.5px;padding:3px 10px;border:1px solid #cfe2f1;
+  }
+  .chip.warn{background:#fdf3e2;border-color:#eeddc0;color:var(--amber)}
+  ul#agendaList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  li.item{
+    border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:#fbfdfe;
+    transition:box-shadow .15s;
+  }
+  li.item.active{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-soft)}
+  li.item.done{opacity:.55}
+  li.item .row1{display:flex;align-items:center;gap:8px}
+  li.item .t{font-weight:700;font-size:13.5px;outline:none;flex:1;border-radius:4px;padding:1px 3px}
+  li.item .t:hover{background:#eef4fa}
+  .timer{font-family:var(--mono);font-size:12.5px;color:var(--sub);white-space:nowrap}
+  li.item.active .timer{color:var(--blue);font-weight:700}
+  .timer.over{color:var(--rec)}
+  li.item .memo{width:100%;border:none;border-top:1px dashed var(--line);background:transparent;
+    font-size:12px;color:var(--sub);margin-top:6px;padding:5px 2px 0;resize:vertical;min-height:20px}
+  .item-ops{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
+  .mini{
+    font-size:11px;border:1px solid var(--line);background:#fff;border-radius:6px;
+    padding:2px 8px;cursor:pointer;color:var(--ink);
+  }
+  .mini:hover{border-color:var(--blue);color:var(--blue)}
+  .mini.go{color:var(--blue);font-weight:700}
+  .mini.done-b{color:var(--ok)}
+  .add-row{display:flex;gap:6px;margin-top:10px}
+  .add-row input{border:1px solid var(--line);border-radius:7px;padding:7px 9px;font-size:12.5px}
+  .add-row .ti{flex:1}
+  .add-row .mi{width:56px;text-align:right;font-family:var(--mono)}
+  .derail{margin-top:14px;border-top:1px dashed var(--line);padding-top:10px}
+  .derail h4{margin:0 0 6px;font-size:12px;color:var(--sub);letter-spacing:.06em}
+  .derail-row{display:flex;gap:6px}
+  .derail-row input{flex:1;border:1px solid var(--line);border-radius:7px;padding:7px 9px;font-size:12.5px}
+  #parkedList{margin:8px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px}
+  #parkedList li{display:flex;align-items:center;gap:6px;font-size:12.5px;background:#f6f9fc;border:1px solid var(--line);border-radius:7px;padding:4px 8px}
+  #parkedList li span{flex:1}
+  .empty{color:var(--sub);font-size:12px;text-align:center;padding:14px 0}
+
+  /* ---------- ② search ---------- */
+  .search-row{display:flex;gap:8px}
+  .search-row input{flex:1;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13px}
+  .result{margin-top:12px}
+  .result .card{
+    background:#f8fbfd;border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:10px;
+  }
+  .result h4{margin:0 0 6px;font-size:12px;color:var(--navy);letter-spacing:.06em}
+  .result .sum{font-size:13px;white-space:pre-wrap;margin:0}
+  .src{margin:8px 0 0;padding:0;list-style:none}
+  .src li{font-size:12px;margin-bottom:4px;word-break:break-all}
+  .src .srcno{font-family:var(--mono);color:var(--sub)}
+  .demo-tag{
+    display:inline-block;background:#f1e8fb;color:#6b3fa0;border:1px solid #e0cff5;
+    font-size:11px;border-radius:6px;padding:1px 8px;margin-left:6px;
+  }
+  .live-tag{display:inline-block;background:#e7f4ec;color:var(--ok);border:1px solid #cde7d8;font-size:11px;border-radius:6px;padding:1px 8px;margin-left:6px}
+
+  /* ---------- ③④ chat ---------- */
+  #chatLog{display:flex;flex-direction:column;gap:10px;min-height:180px;max-height:420px;overflow-y:auto;padding:2px}
+  .msg{max-width:88%;border-radius:10px;padding:8px 12px;font-size:13px;white-space:pre-wrap}
+  .msg.iwata{align-self:flex-end;background:var(--navy);color:#fff;border-bottom-right-radius:3px}
+  .msg.ai{align-self:flex-start;background:#eef4fa;border:1px solid var(--line);border-bottom-left-radius:3px}
+  .msg .who{display:block;font-size:10.5px;letter-spacing:.1em;color:var(--sub);margin-bottom:3px}
+  .msg.iwata .who{color:#bcd8ec}
+  .msg .rec-tag{display:inline-block;background:var(--rec);color:#fff;font-size:10px;border-radius:4px;padding:0 6px;margin-left:6px;letter-spacing:.08em}
+  .cands{display:flex;flex-direction:column;gap:8px;margin:8px 0}
+  .cand{border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:#fff}
+  .cand.adopted{border-color:var(--ok);box-shadow:0 0 0 2px #e2f1e8}
+  .cand.dim{opacity:.45}
+  .cand .ch{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+  .cand .ang{font-size:11px;font-weight:700;color:var(--navy);background:var(--blue-soft);border-radius:5px;padding:1px 7px}
+  .cand p{margin:0;font-size:12.8px;white-space:pre-wrap}
+  .composer{margin-top:10px;border-top:1px dashed var(--line);padding-top:10px}
+  .composer textarea{
+    width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;
+    resize:vertical;min-height:56px;
+  }
+  .composer .ops{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
+  .composer label{font-size:12px;color:var(--sub);display:flex;align-items:center;gap:5px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .chips .mini{background:#f6f9fc}
+
+  /* ---------- ⑤ transcript ---------- */
+  section.wide{grid-column:1/-1}
+  .tr-wrap{display:flex;flex-direction:column;gap:8px}
+  .tr-status{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:2px 12px;font-size:12px;background:#f6f9fc;color:var(--sub)}
+  .pill.on{background:#e7f4ec;border-color:#cde7d8;color:var(--ok)}
+  .pill.err{background:#fdeaea;border-color:#f3c4c4;color:var(--rec)}
+  #trText{width:100%;min-height:110px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;resize:vertical;line-height:1.6}
+  #trInterim{min-height:20px;font-size:12.5px;color:var(--sub);font-style:italic}
+  .tr-ops{display:flex;gap:8px;flex-wrap:wrap}
+
+  /* ---------- offline gate ---------- */
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  #netBanner{display:none;background:#fdf3e2;border-bottom:1px solid #eeddc0;color:var(--amber);
+    font-size:12.5px;padding:6px 16px;text-align:center}
+  #netBanner.show{display:block}
+  .netstat{display:flex;align-items:center;gap:7px;font-size:12px;color:#dbeaf6}
+  .netstat .dot{width:9px;height:9px;border-radius:50%;background:#39d98a}
+  .netstat.off .dot{background:#ffcf5c;animation:pulse 1.2s infinite}
+
+  /* ---------- ⑥ compositor ---------- */
+  .comp-grid{display:flex;gap:16px;flex-wrap:wrap}
+  .comp-col{flex:1;min-width:260px}
+  .comp-col h4{margin:8px 0 6px;font-size:12px;color:var(--sub);letter-spacing:.06em}
+  #compCanvas{width:100%;max-width:640px;border:1px solid var(--line);border-radius:8px;background:#0b1622;display:block}
+  .file-btn{position:relative;overflow:hidden;display:inline-flex;align-items:center}
+  .file-btn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+  #avSize{width:90px;vertical-align:middle}
+
+  /* ---------- footer / modal ---------- */
+  footer{
+    max-width:1500px;margin:0 auto;padding:6px 16px 18px;font-size:11.5px;color:var(--sub);
+    display:flex;gap:14px;flex-wrap:wrap;
+  }
+  dialog{
+    border:none;border-radius:12px;padding:0;max-width:460px;width:92%;
+    box-shadow:0 12px 40px rgba(15,61,92,.35);
+  }
+  dialog::backdrop{background:rgba(15,40,58,.45)}
+  .modal-in{padding:18px}
+  .modal-in h3{margin:0 0 4px;font-size:15px;color:var(--navy)}
+  .modal-in p{font-size:12px;color:var(--sub);margin:0 0 10px}
+  .modal-in input,.modal-in select{
+    width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;margin-bottom:10px;
+  }
+  .modal-in .ops{display:flex;gap:8px;justify-content:flex-end}
+  /* ---------- expand / bulk / editable brand ---------- */
+  .panel-head .exp{
+    margin-left:8px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);
+    color:#fff;font-size:11px;padding:2px 8px;border-radius:6px;cursor:pointer;white-space:nowrap;
+  }
+  .panel-head .exp:hover{background:rgba(255,255,255,.28)}
+  #expandDlg{width:96vw;max-width:96vw;height:92vh;max-height:92vh;background:#fff;border-radius:12px;padding:0}
+  .exp-wrap{display:flex;flex-direction:column;height:100%}
+  .exp-head{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--navy);color:#fff}
+  .exp-head b{font-size:15px}
+  .exp-body{flex:1;overflow:auto;padding:14px;background:#fbfdfe}
+  .more-row{border:none!important;background:transparent!important;text-align:center;padding:6px 0!important}
+  #bulkText{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;margin-bottom:10px;resize:vertical}
+  #appName{outline:none;border-bottom:1px dashed rgba(255,255,255,.4);cursor:text;min-width:120px;display:inline-block}
+  #appName:focus{border-bottom-style:solid;border-bottom-color:#fff}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="nrow">
+      <b id="appName" contenteditable="true" spellcheck="false" title="クリックして編集。この名前が書き出すファイル名になります">ローカル採用会議 スタジオ</b>
+      <button class="btn ghost tiny" id="exportBtn" title="この名前で収録テキストを書き出します">⬇ 書き出す</button>
+    </div>
+    <span>収録ファイル名（クリックで編集）</span>
+  </div>
+  <div class="onair" id="onairBox">
+    <span class="dot"></span>
+    <span class="clock" id="onairClock">00:00</span>
+    <span class="label" id="onairLabel">STAND BY</span>
+    <button class="btn ghost" id="onairBtn">収録開始</button>
+  </div>
+  <div class="ep">
+    <input id="epTitle" placeholder="今日のテーマ（例：応募が来ない…）" />
+  </div>
+  <div class="netstat" id="netStat"><span class="dot"></span><span id="netStatTxt">ONLINE</span></div>
+  <span class="spacer"></span>
+  <button class="btn ghost" id="settingBtn">⚙ 設定</button>
+</header>
+
+<div id="netBanner">オフラインです。②検索・③AI回答・④候補生成はWi-Fi接続後に自動で発動します。文字起こしの編集・録音・カメラ確認はオフラインでも使えます。</div>
+
+<main>
+  <!-- ① アジェンダ -->
+  <section class="panel" id="secAgenda" aria-label="アジェンダ">
+    <div class="panel-head"><span class="no">①</span>アジェンダ<span class="sub">AGENDA / 進行</span><button class="exp" title="全画面で表示">⛶ 全画面</button></div>
+    <div class="panel-body">
+      <p class="hint">「開始」で項目タイマーが動きます。脱線したら項目を完了にせず、脱線メモへ退避 → 伝えたい項目は必ず✔をつけて網羅します。</p>
+      <div class="agenda-meta">
+        <span class="chip" id="chipRemain">未消化 0件／0分</span>
+        <span class="chip" id="chipState">配信前</span>
+        <button class="btn" id="bulkBtn" title="番号つきテキストから一括でアジェンダを作成">📄 テキストから一括作成</button>
+      </div>
+      <ul id="agendaList"></ul>
+      <div class="add-row">
+        <input class="ti" id="newTitle" placeholder="項目を追加（例：仕事体験の話）" />
+        <input class="mi" id="newMin" type="number" min="1" max="60" value="5" aria-label="想定分" />
+        <button class="btn primary" id="addBtn">追加</button>
+      </div>
+      <div class="derail">
+        <h4>脱線メモ（あとで）</h4>
+        <div class="derail-row">
+          <input id="parkInput" placeholder="脱線した話題をメモ" />
+          <button class="btn" id="parkBtn">退避</button>
+        </div>
+        <ul id="parkedList"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ② AIサーチ -->
+  <section class="panel" id="secSearch" aria-label="AI検索">
+    <div class="panel-head"><span class="no">④</span>AIサーチ<span class="sub">REALTIME SEARCH</span><button class="exp" title="全画面で表示">⛶ 全画面</button></div>
+    <div class="panel-body">
+      <p class="hint">単語や記事の調べもの → 要約と出典を表示。Gemini APIキー（設定）があると Google検索で裏取りした結果を表示します。</p>
+      <div class="search-row">
+        <input id="searchQuery" placeholder="例：地域企業 仕事体験 インターン 事例" />
+        <button class="btn primary" id="searchBtn">検索</button>
+      </div>
+      <div class="result" id="searchResult">
+        <p class="empty">検索すると、ここに要約と出典が表示されます。</p>
+      </div>
+      <button class="btn" id="toChatBtn" disabled>この結果を③の会話へ送る</button>
+    </div>
+  </section>
+
+  <!-- ③ AI回答 ／ ④ 回答選択 -->
+  <section class="panel" id="secChat" aria-label="AI回答と回答選択">
+    <div class="panel-head"><span class="no">③</span>AI回答・回答選択<span class="sub">AI CAST</span><button class="exp" title="全画面で表示">⛶ 全画面</button></div>
+    <div class="panel-body">
+      <div id="chatLog" aria-live="polite"></div>
+      <div class="composer">
+        <textarea id="chatInput" placeholder="岩田さんの問いを入力（例：知名度の低い地域企業が、新卒学生に会うために最初に変えるべきことは？）"></textarea>
+        <div class="ops">
+          <button class="btn primary" id="sendBtn">送信</button>
+          <button class="btn" id="candBtn">候補を3案生成</button>
+          <label><input type="checkbox" id="withSearch" /> 検索しながら答える</label>
+          <label><input type="checkbox" id="ttsChk" /> AIの発言を読み上げる</label>
+          <button class="btn" id="clearChatBtn" style="margin-left:auto">会話をクリア</button>
+        </div>
+        <div class="chips">
+          <button class="mini qchip">学生目線で意見を</button>
+          <button class="mini qchip">反論して</button>
+          <button class="mini qchip">この地域向けに翻訳して</button>
+          <button class="mini qchip">進行台本に起こして</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑤ 音声テキスト化 -->
+  <section class="panel wide" id="secTranscript" aria-label="音声テキスト化">
+    <div class="panel-head"><span class="no">②</span>音声テキスト化<span class="sub">LIVE TRANSCRIPT</span><button class="exp" title="全画面で表示">⛶ 全画面</button></div>
+    <div class="panel-body tr-wrap">
+      <p class="hint">マイクからの音声をリアルタイムで文字起こしします。誤変換はこの欄で直接直してから③へ送るので、岩田さんの言葉がAIに正しく届いているか確認できます。</p>
+      <div class="tr-status">
+        <button class="btn primary" id="trToggle">🎤 文字起こしを開始</button>
+        <span class="pill" id="trPill">待機中</span>
+        <span class="hint" id="trCount" style="margin:0">0文字</span>
+        <span class="hint" style="margin:0">※ Chrome / Edge 推奨（マイク許可が必要）。非対応ブラウザでは下の欄に貼り付けて代用できます</span>
+      </div>
+      <textarea id="trText" placeholder="ここに岩田さんの発言が文字起こしされていきます。直接編集もできます。"></textarea>
+      <div id="trInterim"></div>
+      <div class="tr-ops">
+        <button class="btn" id="trSendAll">全文を③の会話へ送る</button>
+        <button class="btn" id="trSendSel">選択部分を③へ送る</button>
+        <button class="btn" id="trClear" style="margin-left:auto">文字起こしをクリア</button>
+      </div>
+      <div class="tr-ops">
+        <button class="btn primary" id="micRecBtn">🎙 録音開始</button>
+        <button class="btn" id="micMuteBtn">🎙 ミュート</button>
+        <span class="pill" id="micPill">マイク未接続</span>
+        <span class="hint" style="margin:0">接続したマイクを録音し、音声ファイル（.webm）で保存します</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑤ カメラ確認 -->
+  <section class="panel wide" id="secCam" aria-label="カメラ確認">
+    <div class="panel-head"><span class="no">⑤</span>カメラ確認<span class="sub">SELF VIEW</span><button class="exp" title="全画面で表示">⛶ 全画面</button></div>
+    <div class="panel-body">
+      <p class="hint">本番前の映り・構図の確認用。カメラ映像のプレビューだけを行います（合成・録画はしません）。</p>
+      <div class="cambox mirror" id="camBox"><video id="camVideo" playsinline muted></video></div>
+      <div class="tr-ops" style="margin-top:8px">
+        <button class="btn" id="camOpenBtn">カメラを開く</button>
+        <button class="btn" id="camStopBtn" disabled>停止</button>
+        <label><input type="checkbox" id="camMirror" checked /> 鏡表示（左右反転）</label>
+        <span class="pill" id="camPill">カメラ未接続</span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span id="footMode">接続状態：デモモード（設定で Gemini APIキーを保存すると実検索・実回答が有効）</span>
+  <span id="footModel"></span>
+  <span>※ AIの回答は出典を確認してから番組で使用してください</span>
+</footer>
+
+<dialog id="settingDlg">
+  <div class="modal-in">
+    <h3>⚙ 設定</h3>
+    <p>APIキーはこのブラウザ内にのみ保存され、外部送信は Gemini API への回答リクエストのみに使われます。キーは Google AI Studio で取得できます。</p>
+    <label for="keyInput" style="font-size:12px">Gemini APIキー</label>
+    <input id="keyInput" type="password" placeholder="AIza..." />
+    <label for="modelSel" style="font-size:12px">モデル</label>
+    <select id="modelSel">
+      <option value="gemini-2.5-flash">Gemini 2.5 Flash（標準・推奨）</option>
+      <option value="gemini-2.5-pro">Gemini 2.5 Pro（高精度）</option>
+      <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite（高速・軽量）</option>
+    </select>
+    <div class="ops">
+      <button class="btn" id="dlgClose">閉じる</button>
+      <button class="btn primary" id="dlgSave">保存</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="bulkDlg">
+  <div class="modal-in">
+    <h3>📄 テキストからアジェンダ一括作成</h3>
+    <p>1行 = 1項目。先頭に数字を付けると、その番号順でアジェンダに反映します。</p>
+    <textarea id="bulkText" rows="8" placeholder="1.どこで採用がとまっているか
+2.国内外の事例を確認"></textarea>
+    <label for="bulkMin" style="font-size:12px">各項目の想定時間（分）</label>
+    <input id="bulkMin" type="number" min="1" max="60" value="5" />
+    <div style="display:flex;gap:16px;font-size:12.5px;color:var(--sub);margin-bottom:12px">
+      <label><input type="radio" name="bulkMode" value="replace" checked /> 入れ替え</label>
+      <label><input type="radio" name="bulkMode" value="append" /> 追加</label>
+    </div>
+    <div class="ops">
+      <button class="btn" id="bulkCancel">キャンセル</button>
+      <button class="btn primary" id="bulkApply">反映する</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="expandDlg">
+  <div class="exp-wrap">
+    <div class="exp-head"><b id="expTitle">全画面</b><button class="btn ghost" id="expClose">閉じる</button></div>
+    <div class="exp-body" id="expBody"></div>
+  </div>
+</dialog>
+
+<script>
+'use strict';
+/* ================= state & storage ================= */
+const LS_KEY='locaiyo_studio_v1';
+const store={ok:false,get(){try{const r=localStorage.getItem(LS_KEY);return r?JSON.parse(r):null}catch(e){return null}},
+  size:0,
+  set(v){try{const j=JSON.stringify(v);localStorage.setItem(LS_KEY,j);this.size=j.length;this.ok=true}catch(e){this.ok=false}}};
+let state={
+  apiKey:'', model:'gemini-2.5-flash',
+  agenda:[
+    {id:1,title:'冒頭：今日のテーマと持ち帰り',minutes:2,memo:'',done:false,base:0,acc:0},
+    {id:2,title:'現状確認：どこで採用が止まっているか',minutes:6,memo:'',done:false,base:0,acc:0},
+    {id:3,title:'AIサーチ：国内外の事例を確認',minutes:7,memo:'',done:false,base:0,acc:0},
+    {id:4,title:'改善案を比較して、その場で直す',minutes:10,memo:'',done:false,base:0,acc:0},
+    {id:5,title:'まとめ：まず取り組むこと3つ',minutes:5,memo:'',done:false,base:0,acc:0}
+  ],
+  activeId:null, onair:false, onairStart:null, parked:[], chat:[], searches:[]
+};
+(function load(){const s=store.get();if(s&&s.agenda)state=Object.assign(state,s);})();
+let warnedSize=false,warnedFail=false;
+function save(){
+  store.set(state);
+  if(!store.ok){
+    if(!warnedFail){warnedFail=true;alert('ブラウザへの保存に失敗しました（容量超過またはプライベートモードの可能性）。「⬇ 書き出す」で内容を保存してください。');}
+  }else{
+    warnedFail=false;
+    if(store.size>3500000&&!warnedSize){warnedSize=true;alert('保存データが大きくなっています（約'+Math.round(store.size/1000)+'K文字／上限は約5M）。「⬇ 書き出す」で保存し、文字起こしをクリアすることをおすすめします。');}
+  }
+}
+
+/* ================= helpers ================= */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=s=>{s=Math.max(0,Math.floor(s));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');};
+function fileNameBase(){return ((state.appName||'ローカル採用会議 スタジオ').replace(/[\\\/:*?"<>|]/g,'_').trim())||'recording';}
+function stamp(){const d=new Date(),z=n=>String(n).padStart(2,'0');return d.getFullYear()+z(d.getMonth()+1)+z(d.getDate())+'_'+z(d.getHours())+z(d.getMinutes());}
+function dl(blob,name){const a=document.createElement('a');const u=URL.createObjectURL(blob);a.href=u;a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{a.remove();URL.revokeObjectURL(u);},1500);}
+function plainPaste(el){el.addEventListener('paste',e=>{e.preventDefault();const t=(e.clipboardData.getData('text')||'').replace(/\s+/g,' ');document.execCommand('insertText',false,t);});}
+function toastMsg(box,text,tag){box.innerHTML='';const c=document.createElement('div');c.className='card';
+  const h=document.createElement('h4');h.textContent=tag;c.appendChild(h);
+  const p=document.createElement('p');p.className='sum';p.textContent=text;c.appendChild(p);box.appendChild(c);}
+
+/* ================= ① agenda ================= */
+function itemElapsed(it){return it.acc+((state.activeId===it.id&&it.base)?(Date.now()-it.base)/1000:0);}
+function renderAgenda(){
+  const ul=$('agendaList');ul.innerHTML='';
+  if(!state.agenda.length){const li=document.createElement('li');li.className='empty';li.textContent='項目を追加、または「テキストから一括作成」してください';ul.appendChild(li);
+    $('chipRemain').textContent='未消化 0件／0分';return;}
+  const expanded=$('expBody').contains(ul);
+  const inc=state.agenda.filter(i=>!i.done);
+  const vis=expanded?state.agenda:(inc.length?inc.slice(0,3):state.agenda.slice(0,3));
+  vis.forEach(it=>{
+    const li=document.createElement('li');li.dataset.id=it.id;li.className='item'+(state.activeId===it.id?' active':'')+(it.done?' done':'');
+    const r1=document.createElement('div');r1.className='row1';
+    const cb=document.createElement('input');cb.type='checkbox';cb.checked=!!it.done;cb.setAttribute('aria-label','伝えた');
+    cb.onchange=()=>{it.done=cb.checked;if(it.done&&state.activeId===it.id){it.acc+=((Date.now()-it.base)/1000);it.base=0;state.activeId=null;}save();renderAgenda();};
+    const t=document.createElement('span');t.className='t';t.contentEditable='true';t.textContent=it.title;
+    t.onblur=()=>{const v=t.textContent.trim();if(v)it.title=v;t.textContent=it.title;save();};
+    t.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();t.blur();}});plainPaste(t);
+    const timer=document.createElement('span');const el=itemElapsed(it);
+    timer.className='timer'+((state.activeId===it.id&&el>it.minutes*60)?' over':'');
+    timer.textContent=fmt(el)+' / '+it.minutes+'分';
+    r1.append(cb,t,timer);li.appendChild(r1);
+    const memo=document.createElement('textarea');memo.className='memo';memo.placeholder='伝えたいポイント（メモ）';
+    memo.value=it.memo||'';memo.onblur=()=>{it.memo=memo.value;save();};li.appendChild(memo);
+    const ops=document.createElement('div');ops.className='item-ops';
+    const bGo=document.createElement('button');bGo.className='mini go';
+    bGo.textContent=state.activeId===it.id?'⏸ 一時停止':'▶ 開始';
+    bGo.onclick=()=>{if(state.activeId===it.id){it.acc+=((Date.now()-it.base)/1000);it.base=0;state.activeId=null;}
+      else{state.agenda.forEach(o=>{if(o.id!==it.id&&o.base){o.acc+=((Date.now()-o.base)/1000);o.base=0;}});state.activeId=it.id;it.base=Date.now();}
+      save();renderAgenda();};
+    const bPark=document.createElement('button');bPark.className='mini';bPark.textContent='↪ 脱線メモへ退避';
+    bPark.onclick=()=>{
+      if(it.base){it.acc+=((Date.now()-it.base)/1000);it.base=0;}
+      if(state.activeId===it.id)state.activeId=null;
+      state.parked.unshift({t:it.title,at:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),item:Object.assign({},it,{done:false,base:0})});
+      state.agenda=state.agenda.filter(o=>o.id!==it.id);
+      save();renderAgenda();renderParked();};
+    const bDel=document.createElement('button');bDel.className='mini';bDel.textContent='削除';
+    bDel.onclick=()=>{state.agenda=state.agenda.filter(o=>o.id!==it.id);if(state.activeId===it.id)state.activeId=null;save();renderAgenda();};
+    ops.append(bGo,bPark,bDel);li.appendChild(ops);ul.appendChild(li);
+  });
+  if(!expanded&&state.agenda.length>3){
+    const more=document.createElement('li');more.className='more-row';
+    const mb=document.createElement('button');mb.className='mini';
+    mb.textContent='全'+state.agenda.length+'件を全画面で表示 ⛶';
+    mb.onclick=()=>openExpand(document.querySelector('section[aria-label="アジェンダ"]'));
+    more.appendChild(mb);ul.appendChild(more);
+  }
+  const undone=state.agenda.filter(i=>!i.done);
+  const remMin=undone.reduce((s,i)=>s+Math.max(0,i.minutes-Math.floor(itemElapsed(i)/60)),0);
+  $('chipRemain').textContent='未消化 '+undone.length+'件／約'+remMin+'分';
+}
+function renderParked(){
+  const ul=$('parkedList');ul.innerHTML='';
+  if(!state.parked.length){const li=document.createElement('li');li.style.background='transparent';li.style.border='none';
+    li.textContent='退避した話題はありません';ul.appendChild(li);return;}
+  state.parked.forEach((p,i)=>{
+    const li=document.createElement('li');const sp=document.createElement('span');
+    sp.textContent=p.t+'（'+p.at+'）';li.appendChild(sp);
+    const b1=document.createElement('button');b1.className='mini';b1.textContent='アジェンダへ戻す';
+    b1.onclick=()=>{const max=Math.max(0,...state.agenda.map(a=>a.id));const src=p.item||{};
+      state.agenda.push({id:max+1,title:p.t,minutes:src.minutes||3,memo:src.memo||'',done:false,base:0,acc:src.acc||0});
+      state.parked.splice(i,1);save();renderAgenda();renderParked();};
+    const b2=document.createElement('button');b2.className='mini';b2.textContent='削除';
+    b2.onclick=()=>{state.parked.splice(i,1);save();renderParked();};
+    li.append(b1,b2);ul.appendChild(li);
+  });
+}
+$('addBtn').onclick=()=>{const v=$('newTitle').value.trim();if(!v)return;
+  const m=Math.max(1,parseInt($('newMin').value)||5);
+  const max=Math.max(0,...state.agenda.map(a=>a.id));
+  state.agenda.push({id:max+1,title:v,minutes:m,memo:'',done:false,base:0,acc:0});
+  $('newTitle').value='';save();renderAgenda();};
+$('parkBtn').onclick=()=>{const v=$('parkInput').value.trim();if(!v)return;
+  state.parked.unshift({t:v,at:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})});
+  $('parkInput').value='';save();renderParked();};
+$('newTitle').addEventListener('keydown',e=>{if(e.key==='Enter')$('addBtn').click();});
+$('parkInput').addEventListener('keydown',e=>{if(e.key==='Enter')$('parkBtn').click();});
+
+/* ================= full-screen expand ================= */
+let expRef=null;
+function openExpand(panel){
+  const body=panel.querySelector('.panel-body');
+  if(!body||expRef)return;
+  expRef={panel:panel,body:body};
+  $('expTitle').textContent=panel.getAttribute('aria-label')||'全画面';
+  $('expBody').appendChild(body);
+  if(body.contains($('agendaList')))renderAgenda();
+  $('expandDlg').showModal();
+}
+$('expandDlg').addEventListener('close',()=>{
+  if(expRef){expRef.panel.appendChild(expRef.body);
+    if(expRef.body.contains($('agendaList')))renderAgenda();
+    expRef=null;}
+});
+$('expClose').onclick=()=>$('expandDlg').close();
+document.querySelectorAll('.panel-head .exp').forEach(b=>{b.onclick=()=>openExpand(b.closest('section.panel'));});
+
+/* ================= bulk agenda from text ================= */
+$('bulkBtn').onclick=()=>{$('bulkText').value='';$('bulkDlg').showModal();};
+$('bulkCancel').onclick=()=>$('bulkDlg').close();
+$('bulkApply').onclick=()=>{
+  const lines=$('bulkText').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!lines.length){alert('1行以上入力してください');return;}
+  const min=Math.max(1,parseInt($('bulkMin').value)||5);
+  const mode=document.querySelector('input[name="bulkMode"]:checked').value;
+  let base=Math.max(0,...state.agenda.map(a=>a.id));
+  const items=lines.map((l,i)=>{
+    const m=l.match(/^(\d+)\s*[.、．)）:：]\s*(.+)$/);
+    const title=(m?m[2]:l).trim()||('項目'+(i+1));
+    return {id:base+1+i,title:title,minutes:min,memo:'',done:false,base:0,acc:0};
+  });
+  if(mode==='replace'){state.agenda=items;state.activeId=null;}
+  else state.agenda=state.agenda.concat(items);
+  save();renderAgenda();$('bulkDlg').close();
+};
+
+/* ================= editable app name ================= */
+const appNameEl=$('appName');
+appNameEl.textContent=state.appName||'ローカル採用会議 スタジオ';
+appNameEl.addEventListener('blur',()=>{const v=appNameEl.textContent.trim().slice(0,40)||'ローカル採用会議 スタジオ';
+  appNameEl.textContent=v;state.appName=v;save();});
+appNameEl.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();appNameEl.blur();}});plainPaste(appNameEl);
+
+/* ================= ON AIR clock ================= */
+function tick(){
+  if(state.onair&&state.onairStart){
+    $('onairClock').textContent=fmt((Date.now()-state.onairStart)/1000);
+  }
+  $('chipState').textContent=state.onair?(state.activeId!=null?'収録中':'収録中（項目未選択）'):'配信前';
+  const it=state.agenda.find(a=>a.id===state.activeId);
+  if(it){const el=itemElapsed(it);
+    const li=$('agendaList').querySelector('[data-id="'+it.id+'"]');
+    if(li){const tm=li.querySelector('.timer');tm.textContent=fmt(el)+' / '+it.minutes+'分';
+      tm.classList.toggle('over',el>it.minutes*60);}
+  }
+  requestAnimationFrame(()=>{});
+}
+setInterval(tick,1000);
+function applyOnairUI(){
+  $('onairBox').classList.toggle('live',!!state.onair);
+  $('onairLabel').textContent=state.onair?'ON AIR':'STAND BY';
+  $('onairBtn').textContent=state.onair?'収録終了':'収録開始';
+}
+$('onairBtn').onclick=()=>{
+  if(!state.onair){state.onair=true;state.onairStart=Date.now();
+    if(!state.activeId&&state.agenda.length){state.activeId=state.agenda.find(a=>!a.done)?.id||null;
+      const it=state.agenda.find(a=>a.id===state.activeId);if(it&&!it.base)it.base=Date.now();}
+    
+  }else{state.onair=false;state.activeId=null;
+    state.agenda.forEach(o=>{if(o.base){o.acc+=((Date.now()-o.base)/1000);o.base=0;}});}
+  save();applyOnairUI();renderAgenda();
+};
+
+/* ================= Gemini API ================= */
+const API_BASE='https://generativelanguage.googleapis.com/v1beta/models/';
+function sysCast(){return 'あなたはビデオポッドキャスト「ローカル採用会議」（地域企業の採用課題と改善提案、新卒採用中心）のAIキャストです。岩田さんの地域新卒採用の議論に応答します。ルール:1)簡潔に、結論から。2)事実は出典を、推察は「推察」と明示。3)最後に「この地域・この会社の規模でどう実行するか」を一文で添える。4)採用成果を断定しない。';}
+async function callGemini(body){
+  if(!state.apiKey)throw new Error('nokey');
+  const res=await fetch(API_BASE+state.model+':generateContent?key='+encodeURIComponent(state.apiKey),{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!res.ok){const t=await res.text();throw new Error('api '+res.status+' '+t.slice(0,200));}
+  return res.json();
+}
+function extractText(data){const c=data?.candidates?.[0];return c?.content?.parts?.map(p=>p.text||'').join('').trim()||'';}
+function extractSources(data){
+  const g=data?.candidates?.[0]?.groundingMetadata;const out=[];
+  const chunks=g?.groundingChunks||[];
+  chunks.forEach(ch=>{const w=ch.web;if(w&&w.uri&&/^https:/.test(w.uri))out.push({title:w.title||w.uri,uri:w.uri});});
+  return out.filter((v,i,a)=>a.findIndex(x=>x.uri===v.uri)===i).slice(0,6);
+}
+
+/* ================= ② search ================= */
+let lastSearchText='';
+async function doSearch(){
+  const q=$('searchQuery').value.trim();if(!q)return;
+  if(!navigator.onLine){alert('オフラインです。Wi-Fi接続後に検索できます');return;}
+  const box=$('searchResult');box.innerHTML='<p class="empty">検索中…</p>';$('searchBtn').disabled=true;
+  try{
+    if(!state.apiKey){
+      await new Promise(r=>setTimeout(r,400));
+      box.innerHTML='';
+      const c=document.createElement('div');c.className='card';
+      c.innerHTML='<h4>要約<span class="demo-tag">デモ表示</span></h4>';
+      const p=document.createElement('p');p.className='sum';
+      p.textContent='デモモードのため実検索は行っていません。⚙ 設定で Gemini APIキーを保存すると、Google検索で裏取りした要約と出典リンクがここに表示されます。\n\n入力された語: '+q;
+      c.appendChild(p);box.appendChild(c);
+      lastSearchText='';$('toChatBtn').disabled=true;return;
+    }
+    const sys='あなたは採用担当のリサーチ係。日本語で、入力された語について最新の公開情報を調査し、3〜5個の箇条書き要約を出す。各要約は簡潔に。推察と事実を混ぜない。情報が見つからない点は「確認できず」と書く。';
+    const data=await callGemini({systemInstruction:{parts:[{text:sys}]},contents:[{role:'user',parts:[{text:q}]}],tools:[{google_search:{}}]});
+    const text=extractText(data),srcs=extractSources(data);
+    box.innerHTML='';const c=document.createElement('div');c.className='card';
+    c.innerHTML='<h4>要約<span class="live-tag">実検索</span></h4>';
+    const p=document.createElement('p');p.className='sum';p.textContent=text||'(要約を取得できませんでした)';c.appendChild(p);
+    if(srcs.length){const u=document.createElement('ul');u.className='src';
+      srcs.forEach((s,i)=>{const li=document.createElement('li');const n=document.createElement('span');n.className='srcno';n.textContent='['+(i+1)+'] ';
+        const a=document.createElement('a');a.href=s.uri;a.target='_blank';a.rel='noopener';a.textContent=s.title;li.append(n,a);u.appendChild(li);});
+      c.appendChild(u);}
+    box.appendChild(c);
+    lastSearchText='【②サーチ結果】質問: '+q+'\n'+text+(srcs.length?'\n出典: '+srcs.map(s=>s.uri).join(' , '):'');
+    $('toChatBtn').disabled=false;state.searches.unshift({q,text,at:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})});save();
+  }catch(e){box.innerHTML='';const c=document.createElement('div');c.className='card';
+    c.innerHTML='<h4>エラー</h4>';const p=document.createElement('p');p.className='sum';
+    p.textContent='検索に失敗しました: '+e.message+'（APIキー・モデル・通信を確認してください）';c.appendChild(p);box.appendChild(c);}
+  finally{$('searchBtn').disabled=false;}
+}
+$('searchBtn').onclick=doSearch;
+$('searchQuery').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch();});
+$('toChatBtn').onclick=()=>{
+  const ta=$('chatInput');ta.value=(ta.value?ta.value+'\n':'')+lastSearchText+'\n→ これを踏まえて意見をください';
+  ta.focus();};
+
+/* ================= ③ chat / ④ candidates ================= */
+function pushMsg(role,text,adopted,sys){
+  state.chat.push({role,text,adopted:!!adopted,sys:!!sys});save();renderChat();
+}
+function renderChat(){
+  const log=$('chatLog');log.innerHTML='';
+  if(!state.chat.length){const d=document.createElement('p');d.className='empty';
+    d.textContent='岩田さんの問いを入力してください。「候補を3案生成」→ 採用すると、その回答が番組のAI発言として確定します。';
+    log.appendChild(d);return;}
+  state.chat.forEach(m=>{
+    const d=document.createElement('div');d.className='msg '+(m.role==='user'?'iwata':'ai');
+    const w=document.createElement('span');w.className='who';
+    w.textContent=m.role==='user'?'岩田':'AIキャスト';d.appendChild(w);
+    const t=document.createElement('span');t.textContent=m.text;d.appendChild(t);
+    if(m.adopted){const r=document.createElement('span');r.className='rec-tag';r.textContent='✔採用';d.appendChild(r);}
+    log.appendChild(d);
+  });
+  log.scrollTop=log.scrollHeight;
+}
+function historyForApi(){
+  const h=state.chat.filter(m=>!m.sys).slice(-8);
+  while(h.length&&h[0].role!=='user')h.shift();
+  return h.map(m=>({role:m.role==='user'?'user':'model',parts:[{text:m.text}]}));
+}
+function candContents(lastQ){const h=historyForApi();
+  if(!h.length||h[h.length-1].role!=='user')h.push({role:'user',parts:[{text:lastQ}]});return h;}
+async function sendChat(){
+  const ta=$('chatInput');const q=ta.value.trim();if(!q)return;
+  if(!navigator.onLine){alert('オフラインです。Wi-Fi接続後に送信できます');return;}
+  ta.value='';pushMsg('user',q);
+  const withSearch=$('withSearch').checked;
+  const body={systemInstruction:{parts:[{text:sysCast()}]},contents:historyForApi()};
+  if(withSearch)body.tools=[{google_search:{}}];
+  await aiReply(body);
+}
+async function aiReply(body){
+  const log=$('chatLog');
+  const wait=document.createElement('div');wait.className='msg ai';wait.textContent='回答を作成中…';log.appendChild(wait);log.scrollTop=log.scrollHeight;
+  try{
+    if(!state.apiKey){await new Promise(r=>setTimeout(r,400));
+      wait.remove();pushMsg('model','（デモ応答）これは動作確認用の固定文です。⚙ 設定で Gemini APIキーを保存すると、実際のAI回答がここに表示されます。',false,true);return;}
+    const data=await callGemini(body);const text=extractText(data);
+    wait.remove();pushMsg('model',text||'（回答を取得できませんでした）',false,!text);
+  }catch(e){wait.remove();pushMsg('model','（エラー: '+e.message+'）',false,true);}
+}
+async function genCandidates(){
+  if(!navigator.onLine){alert('オフラインです。Wi-Fi接続後に生成できます');return;}
+  const ta=$('chatInput');const q=ta.value.trim();
+  if(!q&&!state.chat.length){alert('まず問いを入力してください');return;}
+  if(q){ta.value='';pushMsg('user',q);}
+  const log=$('chatLog');const wait=document.createElement('div');wait.className='msg ai';wait.textContent='候補を3案、作成中…';log.appendChild(wait);log.scrollTop=log.scrollHeight;
+  const lastQ=q||state.chat.filter(m=>m.role==='user').slice(-1)[0]?.text||'';
+  if(!lastQ){wait.remove();alert('まず問いを入力してください');return;}
+  if(!state.apiKey){
+    await new Promise(r=>setTimeout(r,500));wait.remove();
+    const box=document.createElement('div');box.className='cands';
+    const demo=[['接点の整理','（デモ）APIキー設定後は、ここに実際の3案が表示されます。この欄は動作確認用のプレースホルダです。'],
+                ['学生への聞き取り','（デモ）採用ボタンを押すと、その案がAI発言として会話に確定します（④回答選択）。'],
+                ['事例調査','（デモ）不採用の案は薄くなって残ります。']];
+    demo.forEach(d=>{const c=document.createElement('div');c.className='cand dim';
+      c.innerHTML='<div class="ch"><span class="ang">'+esc(d[0])+'</span></div>';
+      const p=document.createElement('p');p.textContent=d[1];c.appendChild(p);box.appendChild(c);});
+    log.appendChild(box);log.scrollTop=log.scrollHeight;return;
+  }
+  try{
+    const body={systemInstruction:{parts:[{text:sysCast()+'\n3つの異なる角度から回答案を作り、JSONで返します。角度は互いに異なる切り口（例:接点設計/学生の実態/他社事例の応用）に。'}]},
+      contents:candContents(lastQ),
+      generationConfig:{responseMimeType:'application/json',
+        responseSchema:{type:'OBJECT',properties:{candidates:{type:'ARRAY',items:{type:'OBJECT',
+          properties:{angle:{type:'STRING'},text:{type:'STRING'}},required:['angle','text']}}},required:['candidates']}}};
+    const data=await callGemini(body);
+    let cands=[];
+    try{const j=JSON.parse(extractText(data));cands=(j.candidates||[]).slice(0,3);}catch(e){}
+    if(!cands.length){wait.textContent='候補の取得に失敗しました。 ';
+      const rb=document.createElement('button');rb.className='mini';rb.textContent='↻ もう一度生成';
+      rb.onclick=()=>{wait.remove();genCandidates();};wait.appendChild(rb);return;}
+    wait.remove();renderCandidateBox(cands);
+  }catch(e){wait.remove();pushMsg('model','（エラー: '+e.message+'）',false,true);}
+}
+function renderCandidateBox(cands){
+  const log=$('chatLog');const box=document.createElement('div');box.className='cands';
+  cands.forEach((c,i)=>{
+    const el=document.createElement('div');el.className='cand';
+    const h=document.createElement('div');h.className='ch';
+    const ang=document.createElement('span');ang.className='ang';ang.textContent=c.angle||('案'+(i+1));
+    h.appendChild(ang);el.appendChild(h);
+    const p=document.createElement('p');p.textContent=c.text;el.appendChild(p);
+    const ops=document.createElement('div');ops.className='item-ops';
+    const b=document.createElement('button');b.className='mini done-b';b.textContent='✔ 採用してAI発言にする';
+    b.onclick=()=>{box.querySelectorAll('.cand').forEach(x=>x.classList.add('dim'));el.classList.remove('dim');el.classList.add('adopted');
+      pushMsg('model',c.text,true);box.remove();if($('ttsChk').checked)speak(c.text);};
+    const b2=document.createElement('button');b2.className='mini';b2.textContent='③へ送る';
+    b2.onclick=()=>{$('chatInput').value=c.text;$('chatInput').focus();};
+    ops.append(b,b2);el.appendChild(ops);box.appendChild(el);
+  });
+  log.appendChild(box);log.scrollTop=log.scrollHeight;
+}
+$('sendBtn').onclick=sendChat;
+$('candBtn').onclick=genCandidates;
+$('clearChatBtn').onclick=()=>{state.chat=[];save();renderChat();};
+$('chatInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}});
+document.querySelectorAll('.qchip').forEach(b=>b.onclick=()=>{$('chatInput').value=b.textContent;$('chatInput').focus();});
+
+/* ================= ⑤ live transcript ================= */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let rec=null,listening=false,srWasRunning=false,srErrCount=0,srRetryTimer=null,micMuted=false;
+const SR_FATAL=['not-allowed','service-not-allowed','audio-capture','language-not-supported'];
+function setPill(mode,text){const p=$('trPill');p.className='pill'+(mode==='on'?' on':mode==='err'?' err':'');p.textContent=text;}
+function renderTr(){const ta=$('trText');ta.value=state.trText||'';$('trCount').textContent=(state.trText||'').length+'文字';}
+function setTrBtn(){$('trToggle').textContent=listening?'⏹ 停止':'🎤 文字起こしを開始';}
+function makeRec(){
+  const r=new SR();r.lang='ja-JP';r.continuous=true;r.interimResults=true;
+  r.onstart=()=>{setPill('on','聞き取り中…');};
+  r.onresult=e=>{srErrCount=0;let interim='';
+    for(let i=e.resultIndex;i<e.results.length;i++){const x=e.results[i];
+      if(x.isFinal){const t=x[0].transcript.trim();
+        if(t){state.trText=(state.trText?state.trText+'\n':'')+t;save();renderTr();$('trText').scrollTop=$('trText').scrollHeight;}}
+      else interim+=x[0].transcript;}
+    $('trInterim').textContent=interim;};
+  r.onerror=e=>{
+    if(e.error==='no-speech'||e.error==='aborted')return;
+    if(SR_FATAL.includes(e.error)){listening=false;srWasRunning=false;clearTimeout(srRetryTimer);setTrBtn();
+      setPill('err',e.error==='not-allowed'||e.error==='service-not-allowed'?'マイクへのアクセスが拒否されました（ブラウザ設定で許可してください）':'認識を続けられません: '+e.error);return;}
+    srErrCount++;setPill('err','認識エラー: '+e.error+'（自動で再試行します）');};
+  r.onend=()=>{$('trInterim').textContent='';
+    if(!listening){setTrBtn();if(!$('trPill').classList.contains('err'))setPill('',micMuted?'ミュート中（認識を一時停止）':'待機中');return;}
+    if(!navigator.onLine){listening=false;setTrBtn();setPill('err','オフラインのため停止しました。接続後に再開してください');return;}
+    if(srErrCount>=6){listening=false;setTrBtn();setPill('err','認識エラーが続いたため停止しました。原因を確認して再度開始してください');return;}
+    const delay=srErrCount?Math.min(10000,500*Math.pow(2,srErrCount-1)):0;
+    clearTimeout(srRetryTimer);
+    srRetryTimer=setTimeout(()=>{if(!listening)return;try{r.start();}catch(err){}},delay);};
+  return r;
+}
+function startTranscribe(){
+  if(!navigator.onLine){setPill('err','オフラインです。Wi-Fi接続後に開始してください');return false;}
+  if(!SR){setPill('err','このブラウザは音声認識に非対応です（Chrome / Edge をご使用ください）');return false;}
+  if(micMuted){setPill('err','ミュート中です。解除してから開始してください');return false;}
+  rec=rec||makeRec();srErrCount=0;listening=true;setTrBtn();
+  try{rec.start();setPill('on','開始しています…');}
+  catch(e){if(e.name!=='InvalidStateError'){listening=false;setTrBtn();setPill('err','開始できませんでした: '+e.message);return false;}}
+  return true;
+}
+function stopTranscribe(){listening=false;clearTimeout(srRetryTimer);try{rec&&rec.stop();}catch(e){}setTrBtn();}
+$('trToggle').onclick=()=>{
+  if(listening){stopTranscribe();setPill('','待機中');srWasRunning=false;return;}
+  startTranscribe();
+};
+$('trText').addEventListener('blur',()=>{state.trText=$('trText').value;save();$('trCount').textContent=state.trText.length+'文字';});
+$('trSendAll').onclick=()=>{const v=$('trText').value.trim();
+  if(!v){alert('文字起こしが空です');return;}
+  $('chatInput').value=($('chatInput').value?$('chatInput').value+'\n':'')+'【岩田さんの発言（文字起こし）】\n'+v;$('chatInput').focus();};
+$('trSendSel').onclick=()=>{const ta=$('trText');const v=ta.value.substring(ta.selectionStart,ta.selectionEnd).trim();
+  if(!v){alert('送る部分を選択してください');return;}
+  $('chatInput').value=($('chatInput').value?$('chatInput').value+'\n':'')+'【岩田さんの発言（文字起こし・抜粋）】\n'+v;$('chatInput').focus();};
+$('trClear').onclick=()=>{state.trText='';save();renderTr();$('trInterim').textContent='';};
+renderTr();
+
+/* ================= ② mic recording & mute ================= */
+let micStream=null,mediaRec=null,micChunks=[],micStart=0,micTimer=null,micLabel='';
+function setMicPill(mode,text){const p=$('micPill');p.className='pill'+(mode==='on'?' on':mode==='err'?' err':'');p.textContent=text;}
+function updateMicPill(){
+  if(mediaRec&&mediaRec.state!=='inactive'){
+    const t=fmt((Date.now()-micStart)/1000);
+    setMicPill(micMuted?'err':'on',(micMuted?'ミュート中 ':'録音中 ')+t+(micLabel?'（'+micLabel+'）':''));
+  }else setMicPill(micMuted?'err':'',micMuted?'ミュート中':'マイク未接続');
+}
+function endMicRec(){
+  clearInterval(micTimer);micTimer=null;
+  if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null;}
+  mediaRec=null;$('micRecBtn').textContent='🎙 録音開始';updateMicPill();
+}
+$('micRecBtn').onclick=async()=>{
+  if(mediaRec&&mediaRec.state!=='inactive'){mediaRec.stop();return;}
+  if(!window.MediaRecorder||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){setMicPill('err','このブラウザは録音に非対応です（https または localhost で開いてください）');return;}
+  try{micStream=await navigator.mediaDevices.getUserMedia({audio:true});}
+  catch(e){setMicPill('err','マイクを開けません: '+e.message);return;}
+  const tr=micStream.getAudioTracks()[0];micLabel=tr?tr.label:'';
+  micStream.getAudioTracks().forEach(t=>{t.enabled=!micMuted;});
+  const mime=['audio/webm;codecs=opus','audio/webm','audio/mp4'].find(m=>MediaRecorder.isTypeSupported(m))||'';
+  try{mediaRec=mime?new MediaRecorder(micStream,{mimeType:mime}):new MediaRecorder(micStream);}
+  catch(e){setMicPill('err','録音を開始できません: '+e.message);micStream.getTracks().forEach(t=>t.stop());micStream=null;return;}
+  micChunks=[];
+  const rc=mediaRec;
+  rc.ondataavailable=e=>{if(e.data&&e.data.size)micChunks.push(e.data);};
+  rc.onerror=e=>{setMicPill('err','録音エラー: '+((e.error&&e.error.message)||'不明'));};
+  rc.onstop=()=>{
+    const type=rc.mimeType||mime||'audio/webm';
+    const ext=type.indexOf('mp4')>=0?'m4a':'webm';
+    if(micChunks.length)dl(new Blob(micChunks,{type:type}),fileNameBase()+'_音声_'+stamp()+'.'+ext);
+    micChunks=[];endMicRec();};
+  rc.start(1000);micStart=Date.now();
+  $('micRecBtn').textContent='⏹ 録音停止';updateMicPill();
+  micTimer=setInterval(updateMicPill,1000);
+};
+$('micMuteBtn').onclick=()=>{
+  micMuted=!micMuted;
+  $('micMuteBtn').textContent=micMuted?'🎙 ミュート解除':'🎙 ミュート';
+  if(micStream)micStream.getAudioTracks().forEach(t=>{t.enabled=!micMuted;});
+  if(micMuted){
+    srWasRunning=listening;
+    if(listening){stopTranscribe();setPill('','ミュート中（認識を一時停止）');}
+  }else{
+    const resume=srWasRunning;srWasRunning=false;
+    if(resume)startTranscribe();else if(!listening)setPill('','待機中');
+  }
+  updateMicPill();
+};
+
+/* ================= network gate (Wi-Fi) ================= */
+function applyNet(){
+  const on=navigator.onLine;
+  $('netStat').classList.toggle('off',!on);
+  $('netStatTxt').textContent=on?'ONLINE':'OFFLINE';
+  $('netBanner').classList.toggle('show',!on);
+  ['searchBtn','sendBtn','candBtn','withSearch'].forEach(id=>{$(id).disabled=!on;});
+}
+window.addEventListener('online',applyNet);
+window.addEventListener('offline',applyNet);
+
+/* ================= ⑤ camera self-view & AI voice ================= */
+let camStream=null,aiSpeaking=false;
+$('camOpenBtn').onclick=async()=>{
+  try{
+    camStream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:960}},audio:false});
+    const v=$('camVideo');v.srcObject=camStream;await v.play();
+    $('camOpenBtn').disabled=true;$('camStopBtn').disabled=false;
+    $('camPill').textContent='カメラ接続中';$('camPill').className='pill on';
+  }catch(e){$('camPill').textContent='カメラを開けません: '+e.message;$('camPill').className='pill err';}
+};
+$('camStopBtn').onclick=()=>{
+  if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null;}
+  $('camVideo').srcObject=null;$('camOpenBtn').disabled=false;$('camStopBtn').disabled=true;
+  $('camPill').textContent='カメラ未接続';$('camPill').className='pill';
+};
+$('camMirror').onchange=()=>{$('camBox').classList.toggle('mirror',$('camMirror').checked);};
+let voiceJa=null;
+function pickVoice(){const vs=speechSynthesis.getVoices();voiceJa=vs.find(v=>v.lang&&v.lang.startsWith('ja'))||null;}
+if('speechSynthesis' in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice;}
+function speak(text){
+  if(!('speechSynthesis' in window))return;
+  speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);
+  u.lang='ja-JP';if(voiceJa)u.voice=voiceJa;u.rate=1.05;
+  u.onstart=()=>{aiSpeaking=true;};
+  u.onend=()=>{aiSpeaking=false;};
+  u.onerror=()=>{aiSpeaking=false;};
+  speechSynthesis.speak(u);
+}
+
+/* ================= export & settings ================= */
+$('exportBtn').onclick=()=>{
+  const L=[];L.push((state.appName||'ローカル採用会議 スタジオ')+'（収録メモ）');L.push('テーマ: '+($('epTitle').value||'(未設定)'));
+  L.push('日時: '+new Date().toLocaleString('ja-JP'));L.push('');
+  L.push('■ アジェンダ（✔=伝えた）');
+  state.agenda.forEach(a=>{L.push((a.done?'✔':'□')+' '+a.title+'（'+a.minutes+'分／使用'+fmt(itemElapsed(a))+'）'+(a.memo?'\n   メモ: '+a.memo:''));});
+  L.push('');L.push('■ 脱線メモ');
+  if(state.parked.length)state.parked.forEach(p=>L.push('・'+p.t+'（'+p.at+'）'));else L.push('(なし)');
+  L.push('');L.push('■ 検索記録');
+  if(state.searches.length)state.searches.forEach(s=>L.push('['+s.at+'] '+s.q));else L.push('(なし)');
+  L.push('');L.push('■ 音声文字起こし');
+  L.push(state.trText?state.trText:'(なし)');
+  L.push('');L.push('■ 採用したAI発言');
+  const ad=state.chat.filter(m=>m.adopted);
+  if(ad.length)ad.forEach(m=>L.push('・'+m.text));else L.push('(なし)');
+  L.push('');L.push('■ 会話ログ');state.chat.forEach(m=>L.push((m.role==='user'?'岩田: ':'AI: ')+m.text));
+  dl(new Blob([L.join('\n')],{type:'text/plain;charset=utf-8'}),fileNameBase()+'_'+stamp()+'.txt');
+};
+$('settingBtn').onclick=()=>{$('keyInput').value=state.apiKey;$('modelSel').value=state.model;$('settingDlg').showModal();};
+$('dlgClose').onclick=()=>$('settingDlg').close();
+$('dlgSave').onclick=()=>{state.apiKey=$('keyInput').value.trim();state.model=$('modelSel').value;save();updateFoot();$('settingDlg').close();};
+function updateFoot(){
+  $('footMode').textContent=state.apiKey?'接続状態：Gemini API 接続済み（実検索・実回答が有効）':'接続状態：デモモード（設定で Gemini APIキーを保存すると実検索・実回答が有効）';
+  $('footModel').textContent='モデル: '+state.model;
+}
+$('epTitle').value=state.epTitle||'';$('epTitle').onblur=()=>{state.epTitle=$('epTitle').value;save();};
+renderAgenda();renderParked();renderChat();updateFoot();applyNet();applyOnairUI();tick();
+</script>
+</body>
+</html>
