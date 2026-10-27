@@ -1,0 +1,1745 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ローカル採用会議スタジオ｜岩田専用 進行コンソール</title>
+<style>
+  :root{
+    --ink:#16283a; --sub:#5b7186; --line:#d7e2ec;
+    --navy:#0f3d5c; --navy2:#14507a; --blue:#1d6fa5; --blue-soft:#e7f1f9;
+    --paper:#f2f6fa; --panel:#ffffff;
+    --rec:#d43d3d; --amber:#b97a12; --ok:#2e7d4f;
+    --mono:ui-monospace,"SF Mono",Consolas,"Courier New",monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:"Hiragino Kaku Gothic ProN","Noto Sans CJK JP","Yu Gothic",Meiryo,sans-serif;
+    color:var(--ink); background:var(--paper); font-size:14px; line-height:1.65;
+  }
+  button{font-family:inherit}
+  input,textarea{font-family:inherit;color:var(--ink)}
+  a{color:var(--blue)}
+  :focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+  /* ---------- top console ---------- */
+  header{
+    background:linear-gradient(180deg,var(--navy) 0%,var(--navy2) 100%);
+    color:#fff; padding:10px 18px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    position:sticky; top:0; z-index:20; box-shadow:0 2px 8px rgba(15,61,92,.35);
+  }
+  .brand{display:flex;flex-direction:column;min-width:220px}
+  .brand b{font-size:16px;letter-spacing:.02em}
+  .brand span{font-size:10.5px;color:#bcd8ec;letter-spacing:.14em}
+  .onair{
+    display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.28);
+    border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:6px 12px;
+  }
+  .onair .dot{width:10px;height:10px;border-radius:50%;background:#5c707f}
+  .onair.live .dot{background:var(--rec);animation:pulse 1.2s infinite}
+  @keyframes pulse{0%{opacity:1}50%{opacity:.25}100%{opacity:1}}
+  .onair .clock{font-family:var(--mono);font-size:18px;letter-spacing:.06em;min-width:74px;text-align:center}
+  .onair .label{font-size:10px;color:#bcd8ec;letter-spacing:.2em}
+  .btn{
+    border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:7px;
+    padding:6px 12px;font-size:12.5px;cursor:pointer;
+  }
+  .btn:hover{border-color:var(--blue);color:var(--blue)}
+  .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+  .btn.primary:hover{background:#17598a;color:#fff}
+  .btn.ghost{background:transparent;border-color:rgba(255,255,255,.45);color:#fff}
+  .btn.ghost:hover{background:rgba(255,255,255,.12);color:#fff}
+  .btn.tiny{padding:2px 9px;font-size:11px}
+  .brand .nrow{display:flex;align-items:center;gap:8px}
+  .pill.mut{background:#fdf3e2;border-color:#eeddc0;color:var(--amber)}
+  .cambox{position:relative}
+  .cambox video{width:100%;max-width:420px;border:1px solid var(--line);border-radius:8px;background:#0b1622;display:block}
+  .cambox.mirror video{transform:scaleX(-1)}
+  .cambox.rec video{border-color:var(--rec);box-shadow:0 0 0 2px rgba(214,69,69,.18)}
+  .cambox .recdot{display:none;position:absolute;top:8px;left:10px;background:rgba(11,22,34,.72);color:#ff6b6b;
+    border-radius:6px;padding:3px 7px;font:600 11px/1.2 var(--mono);letter-spacing:.08em}
+  .cambox.rec .recdot{display:block;animation:pulse 1.2s infinite}
+  header .spacer{flex:1}
+  .ep{display:flex;align-items:center;gap:8px}
+  .ep input{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;padding:6px 10px;width:250px;font-size:12.5px}
+  .ep input::placeholder{color:#a9c6da}
+
+  /* ---------- studio grid ---------- */
+  main{
+    display:grid;grid-template-columns:minmax(310px,.95fr) minmax(400px,1.35fr) minmax(330px,1fr);
+    gap:14px;padding:14px;max-width:1620px;margin:0 auto;align-items:start;
+  }
+  main > .col{display:flex;flex-direction:column;gap:14px;min-width:0}
+  @media (max-width:1180px){
+    main{grid-template-columns:1fr;max-width:1080px}
+    main > .col{display:contents}
+    #secAgenda{order:1}#secTranscript{order:2}#secChat{order:3}#secSearch{order:4}
+    #secClips{order:5}#secFacts{order:6}#secCases{order:7}#secQuestions{order:8}
+    #secGuests{order:9}#secCam{order:10}
+  }
+  section.panel{
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    box-shadow:0 1px 3px rgba(22,40,58,.06);
+  }
+  .panel-head{
+    display:flex;align-items:center;gap:8px;background:var(--navy);color:#fff;
+    padding:8px 12px;font-weight:700;font-size:13.5px;letter-spacing:.03em;
+  }
+  .panel-head .no{
+    background:rgba(255,255,255,.16);border-radius:5px;padding:0 7px;font-size:12px;
+    font-family:var(--mono);
+  }
+  .panel-head .sub{font-weight:400;font-size:11px;color:#bcd8ec;margin-left:auto;letter-spacing:.08em}
+  .panel-body{padding:12px}
+  .hint{font-size:11.5px;color:var(--sub);margin:0 0 8px}
+
+  /* ---------- ① agenda ---------- */
+  .agenda-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .chip{
+    background:var(--blue-soft);color:var(--navy);border-radius:999px;
+    font-size:11.5px;padding:3px 10px;border:1px solid #cfe2f1;
+  }
+  .chip.warn{background:#fdf3e2;border-color:#eeddc0;color:var(--amber)}
+  ul#agendaList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  li.item{
+    border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:#fbfdfe;
+    transition:box-shadow .15s;
+  }
+  li.item.active{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-soft)}
+  li.item.done{opacity:.55}
+  li.item .row1{display:flex;align-items:center;gap:8px}
+  li.item .t{font-weight:700;font-size:13.5px;outline:none;flex:1;border-radius:4px;padding:1px 3px}
+  li.item .t:hover{background:#eef4fa}
+  .timer{font-family:var(--mono);font-size:12.5px;color:var(--sub);white-space:nowrap}
+  li.item.active .timer{color:var(--blue);font-weight:700}
+  .timer.over{color:var(--rec)}
+  li.item .memo{width:100%;border:none;border-top:1px dashed var(--line);background:transparent;
+    font-size:12px;color:var(--sub);margin-top:6px;padding:5px 2px 0;resize:vertical;min-height:20px}
+  .item-ops{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
+  .mini{
+    font-size:11px;border:1px solid var(--line);background:#fff;border-radius:6px;
+    padding:2px 8px;cursor:pointer;color:var(--ink);
+  }
+  .mini:hover{border-color:var(--blue);color:var(--blue)}
+  .mini.go{color:var(--blue);font-weight:700}
+  .mini.done-b{color:var(--ok)}
+  .add-row{display:flex;gap:6px;margin-top:10px}
+  .add-row input{border:1px solid var(--line);border-radius:7px;padding:7px 9px;font-size:12.5px}
+  .add-row .ti{flex:1}
+  .add-row .mi{width:56px;text-align:right;font-family:var(--mono)}
+  .derail{margin-top:14px;border-top:1px dashed var(--line);padding-top:10px}
+  .derail h4{margin:0 0 6px;font-size:12px;color:var(--sub);letter-spacing:.06em}
+  .derail-row{display:flex;gap:6px}
+  .derail-row input{flex:1;border:1px solid var(--line);border-radius:7px;padding:7px 9px;font-size:12.5px}
+  #parkedList{margin:8px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px}
+  #parkedList li{display:flex;align-items:center;gap:6px;font-size:12.5px;background:#f6f9fc;border:1px solid var(--line);border-radius:7px;padding:4px 8px}
+  #parkedList li span{flex:1}
+  .empty{color:var(--sub);font-size:12px;text-align:center;padding:14px 0}
+
+  /* ---------- ② search ---------- */
+  .search-row{display:flex;gap:8px}
+  .search-row input{flex:1;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13px}
+  .result{margin-top:12px}
+  .result .card{
+    background:#f8fbfd;border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:10px;
+  }
+  .result h4{margin:0 0 6px;font-size:12px;color:var(--navy);letter-spacing:.06em}
+  .result .sum{font-size:13px;white-space:pre-wrap;margin:0}
+  .src{margin:8px 0 0;padding:0;list-style:none}
+  .src li{font-size:12px;margin-bottom:4px;word-break:break-all}
+  .src .srcno{font-family:var(--mono);color:var(--sub)}
+  .demo-tag{
+    display:inline-block;background:#f1e8fb;color:#6b3fa0;border:1px solid #e0cff5;
+    font-size:11px;border-radius:6px;padding:1px 8px;margin-left:6px;
+  }
+  .live-tag{display:inline-block;background:#e7f4ec;color:var(--ok);border:1px solid #cde7d8;font-size:11px;border-radius:6px;padding:1px 8px;margin-left:6px}
+
+  /* ---------- ③ chat ---------- */
+  #chatLog{display:flex;flex-direction:column;gap:10px;min-height:180px;max-height:420px;overflow-y:auto;padding:2px}
+  .msg{max-width:88%;border-radius:10px;padding:8px 12px;font-size:13px;white-space:pre-wrap}
+  .msg.iwata{align-self:flex-end;background:var(--navy);color:#fff;border-bottom-right-radius:3px}
+  .msg.ai{align-self:flex-start;background:#eef4fa;border:1px solid var(--line);border-bottom-left-radius:3px}
+  .msg .who{display:block;font-size:10.5px;letter-spacing:.1em;color:var(--sub);margin-bottom:3px}
+  .msg.iwata .who{color:#bcd8ec}
+  .msg .rec-tag{display:inline-block;background:var(--rec);color:#fff;font-size:10px;border-radius:4px;padding:0 6px;margin-left:6px;letter-spacing:.08em}
+  .cands{display:flex;flex-direction:column;gap:8px;margin:8px 0}
+  .cand{border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:#fff}
+  .cand.adopted{border-color:var(--ok);box-shadow:0 0 0 2px #e2f1e8}
+  .cand.dim{opacity:.45}
+  .cand .ch{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+  .cand .ang{font-size:11px;font-weight:700;color:var(--navy);background:var(--blue-soft);border-radius:5px;padding:1px 7px}
+  .cand p{margin:0;font-size:12.8px;white-space:pre-wrap}
+  .composer{margin-top:10px;border-top:1px dashed var(--line);padding-top:10px}
+  .composer textarea{
+    width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;
+    resize:vertical;min-height:56px;
+  }
+  .composer .ops{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
+  .composer label{font-size:12px;color:var(--sub);display:flex;align-items:center;gap:5px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .chips .mini{background:#f6f9fc}
+
+  /* ---------- ⑤ transcript ---------- */
+  section.wide{grid-column:1/-1}
+  .tr-wrap{display:flex;flex-direction:column;gap:8px}
+  .tr-status{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:2px 12px;font-size:12px;background:#f6f9fc;color:var(--sub)}
+  .pill.on{background:#e7f4ec;border-color:#cde7d8;color:var(--ok)}
+  .pill.err{background:#fdeaea;border-color:#f3c4c4;color:var(--rec)}
+  #trText{width:100%;min-height:110px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;resize:vertical;line-height:1.6}
+  #trInterim{min-height:20px;font-size:12.5px;color:var(--sub);font-style:italic}
+  .tr-ops{display:flex;gap:8px;flex-wrap:wrap}
+  .tr-mode{display:flex;flex-wrap:wrap;gap:14px;align-items:center;font-size:12px;color:var(--sub);
+    background:#f6f9fc;border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+  .tr-mode label{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+  #mixRow{border-top:1px dashed var(--line);padding-top:8px;margin-top:2px}
+
+  /* ---------- offline gate ---------- */
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  #netBanner{display:none;background:#fdf3e2;border-bottom:1px solid #eeddc0;color:var(--amber);
+    font-size:12.5px;padding:6px 16px;text-align:center}
+  #netBanner.show{display:block}
+  .netstat{display:flex;align-items:center;gap:7px;font-size:12px;color:#dbeaf6}
+  .netstat .dot{width:9px;height:9px;border-radius:50%;background:#39d98a}
+  .netstat.off .dot{background:#ffcf5c;animation:pulse 1.2s infinite}
+
+  /* ---------- ⑥ compositor ---------- */
+  .comp-grid{display:flex;gap:16px;flex-wrap:wrap}
+  .comp-col{flex:1;min-width:260px}
+  .comp-col h4{margin:8px 0 6px;font-size:12px;color:var(--sub);letter-spacing:.06em}
+  #compCanvas{width:100%;max-width:640px;border:1px solid var(--line);border-radius:8px;background:#0b1622;display:block}
+  .file-btn{position:relative;overflow:hidden;display:inline-flex;align-items:center}
+  .file-btn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+  #avSize{width:90px;vertical-align:middle}
+
+  /* ---------- footer / modal ---------- */
+  footer{
+    max-width:1500px;margin:0 auto;padding:6px 16px 18px;font-size:11.5px;color:var(--sub);
+    display:flex;gap:14px;flex-wrap:wrap;
+  }
+  dialog{
+    border:none;border-radius:12px;padding:0;max-width:460px;width:92%;
+    box-shadow:0 12px 40px rgba(15,61,92,.35);
+  }
+  dialog::backdrop{background:rgba(15,40,58,.45)}
+  .modal-in{padding:18px}
+  .modal-in h3{margin:0 0 4px;font-size:15px;color:var(--navy)}
+  .modal-in p{font-size:12px;color:var(--sub);margin:0 0 10px}
+  .modal-in input,.modal-in select{
+    width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;margin-bottom:10px;
+  }
+  .modal-in .ops{display:flex;gap:8px;justify-content:flex-end}
+  /* ---------- expand / bulk / editable brand ---------- */
+  .panel-head .exp{
+    margin-left:8px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);
+    color:#fff;font-size:11px;padding:2px 8px;border-radius:6px;cursor:pointer;white-space:nowrap;
+  }
+  .panel-head .exp:hover{background:rgba(255,255,255,.28)}
+  #expandDlg{width:96vw;max-width:96vw;height:92vh;max-height:92vh;background:#fff;border-radius:12px;padding:0}
+  .exp-wrap{display:flex;flex-direction:column;height:100%}
+  .exp-head{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--navy);color:#fff}
+  .exp-head b{font-size:15px}
+  .exp-body{flex:1;overflow:auto;padding:14px;background:#fbfdfe}
+  .more-row{border:none!important;background:transparent!important;text-align:center;padding:6px 0!important}
+  #bulkText{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;margin-bottom:10px;resize:vertical}
+  #appName{outline:none;border-bottom:1px dashed rgba(255,255,255,.4);cursor:text;min-width:120px;display:inline-block}
+  #appName:focus{border-bottom-style:solid;border-bottom-color:#fff}
+  /* ---------- ⑥⑦⑧⑨⑩ new panels ---------- */
+  .form-grid{display:grid;gap:6px;margin-bottom:6px}
+  .form-grid.c2{grid-template-columns:1fr 1fr}
+  .fld{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .fld label{font-size:10.5px;color:var(--sub);letter-spacing:.05em}
+  .fld input,.fld select{border:1px solid var(--line);border-radius:7px;padding:6px 8px;font-size:12.5px;width:100%;background:#fff}
+  .btn-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+  .row-list{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:280px;overflow:auto}
+  .row-list li{border:1px solid var(--line);border-radius:8px;background:#fbfdfe;padding:6px 8px;font-size:12.5px}
+  .row-list li.done{opacity:.5}
+  .row-list li.done .main-t{text-decoration:line-through}
+  .rl-top{display:flex;align-items:center;gap:7px}
+  .rl-top .main-t{flex:1;min-width:0;overflow-wrap:anywhere}
+  .rl-sub{font-size:11px;color:var(--sub);margin-top:2px;overflow-wrap:anywhere}
+  .rl-ops{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap}
+  .tag{display:inline-block;font-size:10px;background:var(--blue-soft);border:1px solid #cfe2f1;color:var(--navy);border-radius:5px;padding:0 6px;margin-right:5px;white-space:nowrap}
+  .tag.g{background:#e7f4ec;border-color:#cde7d8;color:var(--ok)}
+  .tag.r{background:#fdeaea;border-color:#f3c4c4;color:var(--rec)}
+  .tag.n{background:#f6f9fc;border-color:var(--line);color:var(--sub)}
+  .case-card{border:1px solid var(--line);border-radius:9px;background:#fbfdfe;padding:8px 10px;margin-top:7px}
+  .case-card h5{margin:0 0 4px;font-size:13px}
+  .case-card .meta{font-size:11px;color:var(--sub);margin-bottom:4px}
+  .case-card .kv{font-size:12px;margin:2px 0;overflow-wrap:anywhere}
+  .case-card .kv b{color:var(--sub);font-weight:600;font-size:10.5px;letter-spacing:.05em;margin-right:5px}
+  .clip{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:#fbfdfe}
+  .clip .tc{font-family:var(--mono);font-size:12px;color:var(--navy);font-weight:700;min-width:50px}
+  .clip .delta{font-family:var(--mono);font-size:10.5px;color:var(--sub);min-width:42px}
+  .clip input{flex:1;min-width:0;border:none;border-bottom:1px dashed transparent;background:transparent;font-size:12px;padding:2px}
+  .clip input:focus{border-bottom-color:var(--blue);outline:none}
+  .clip .x{border:none;background:transparent;color:var(--sub);cursor:pointer;font-size:13px;padding:0 4px}
+  .clip .x:hover{color:var(--rec)}
+  .preset{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px}
+  .preset h4{margin:0 0 6px;font-size:12px;color:var(--sub);letter-spacing:.06em}
+  .preset-row{display:flex;gap:6px;margin-bottom:6px}
+  .preset-row select,.preset-row input{flex:1;min-width:0;border:1px solid var(--line);border-radius:7px;padding:6px 8px;font-size:12.5px;background:#fff;color:var(--ink)}
+  .btn.mark{background:#f2f6fa;border-color:#f2f6fa;color:var(--navy);font-weight:700}
+  .btn.mark:hover{background:#fff;border-color:#fff;color:var(--navy)}
+  .btn.mark.flash{background:var(--rec);border-color:var(--rec);color:#fff}
+  .btn.mark .mk-count{display:inline-block;margin-left:7px;background:var(--blue);color:#fff;border-radius:999px;padding:0 7px;font-size:11px;font-family:var(--mono)}
+  .btn.mark.flash .mk-count{background:#fff;color:var(--rec)}
+  .markbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .kbd{font-family:var(--mono);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;background:#fff;padding:0 5px;font-size:11px}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="nrow">
+      <b id="appName" contenteditable="true" spellcheck="false" title="クリックして編集。この名前が書き出すファイル名になります">ローカル採用会議 スタジオ</b>
+      <button class="btn ghost tiny" id="exportBtn" title="この名前で収録テキストを書き出します">⬇ 書き出す</button>
+    </div>
+    <span>収録ファイル名（クリックで編集）</span>
+  </div>
+  <div class="onair" id="onairBox">
+    <span class="dot"></span>
+    <span class="clock" id="onairClock">00:00</span>
+    <span class="label" id="onairLabel">STAND BY</span>
+    <button class="btn ghost" id="onairBtn">収録開始</button>
+  </div>
+  <button class="btn mark" id="markBtn" title="配信中に押すとタイムコードを記録（M キー / F8 でも可）">🎬 マーク<span class="mk-count" id="markCount">0</span></button>
+  <div class="ep">
+    <input id="epTitle" placeholder="今日のテーマ（例：応募が来ない…）" />
+  </div>
+  <div class="netstat" id="netStat"><span class="dot"></span><span id="netStatTxt">ONLINE</span></div>
+  <span class="spacer"></span>
+  <button class="btn ghost" id="settingBtn">⚙ 設定</button>
+</header>
+
+<div id="netBanner">オフラインです。③AI回答・回答選択・④Google検索はWi-Fi接続後に使えます。文字起こしの編集・音声録音・カメラ録画はオフラインでも使えます。</div>
+
+<main>
+  <div class="col col-a">
+    <!-- ① アジェンダ -->
+    <section class="panel" id="secAgenda" aria-label="アジェンダ">
+      <div class="panel-head"><span class="no">①</span>アジェンダ<span class="sub">AGENDA / 進行</span><button class="exp" title="全画面で表示">⛶ 全画面</button></div>
+      <div class="panel-body">
+        <p class="hint">「開始」で項目タイマーが動きます。脱線したら項目を完了にせず、脱線メモへ退避 → 伝えたい項目は必ず✔をつけて網羅します。</p>
+        <div class="agenda-meta">
+          <span class="chip" id="chipRemain">未消化 0件／0分</span>
+          <span class="chip" id="chipState">配信前</span>
+          <button class="btn" id="bulkBtn" title="番号つきテキストから一括でアジェンダを作成">📄 テキストから一括作成</button>
+        </div>
+        <ul id="agendaList"></ul>
+        <div class="add-row">
+          <input class="ti" id="newTitle" placeholder="項目を追加（例：仕事体験の話）" />
+          <input class="mi" id="newMin" type="number" min="1" max="60" value="5" aria-label="想定分" />
+          <button class="btn primary" id="addBtn">追加</button>
+        </div>
+        <div class="preset">
+          <h4>プリセット（アジェンダの型）</h4>
+          <div class="preset-row">
+            <select id="presetSel" aria-label="プリセット"></select>
+            <button class="btn" id="presetLoad">呼出</button>
+            <button class="btn" id="presetDel">削除</button>
+          </div>
+          <div class="preset-row">
+            <input id="presetName" placeholder="今のアジェンダに名前を付けて保存" />
+            <button class="btn" id="presetSave">保存</button>
+          </div>
+        </div>
+        <div class="derail">
+          <h4>脱線メモ（あとで）</h4>
+          <div class="derail-row">
+            <input id="parkInput" placeholder="脱線した話題をメモ" />
+            <button class="btn" id="parkBtn">退避</button>
+          </div>
+          <ul id="parkedList"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ⑥ 想定質問リスト -->
+    <section class="panel" id="secQuestions" aria-label="想定質問リスト">
+      <div class="panel-head"><span class="no">⑥</span>想定質問リスト<span class="sub">QUESTIONS</span><button class="exp" title="全画面で表示">⛶ 全画面</button></div>
+      <div class="panel-body">
+        <p class="hint">アジェンダの✔とは別に「聞きたいこと」を管理します。聞いたらチェック。各行の「③へ」でAIキャストへの投げかけに使えます。</p>
+        <div class="form-grid c2">
+          <div class="fld"><label for="qText">質問</label><input id="qText" placeholder="例：仕事体験に来た学生は何を見て志望を決めるか" /></div>
+          <div class="fld"><label for="qTo">誰に</label>
+            <select id="qTo"><option>学生</option><option>企業</option><option>ゲスト</option><option>自分</option></select>
+          </div>
+        </div>
+        <div class="btn-row"><button class="btn primary" id="qAdd">質問を追加</button></div>
+        <ul class="row-list" id="qList"></ul>
+      </div>
+    </section>
+
+    <!-- ⑩ ゲスト -->
+    <section class="panel" id="secGuests" aria-label="ゲスト">
+      <div class="panel-head"><span class="no">⑩</span>ゲスト<span class="sub">GUESTS / 読み仮名</span><button class="exp" title="全画面で表示">⛶ 全画面</button></div>
+      <div class="panel-body">
+        <p class="hint">名前・肩書・<b>読み仮名</b>を入れておくと、AIキャストへの指示に自動で入り、人名の誤読と読み上げの失敗を防げます。</p>
+        <div class="form-grid c2">
+          <div class="fld"><label for="gName">名前</label><input id="gName" placeholder="例：山田 太郎" /></div>
+          <div class="fld"><label for="gKana">読み仮名</label><input id="gKana" placeholder="例：やまだ たろう" /></div>
+        </div>
+        <div class="form-grid c2">
+          <div class="fld"><label for="gTitle">肩書・所属</label><input id="gTitle" placeholder="例：〇〇製作所 採用責任者" /></div>
+          <div class="fld"><label for="gNote">ひとこと（紹介用）</label><input id="gNote" placeholder="例：現場採用10年" /></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="gAdd">追加</button>
+          <button class="btn" id="gCancel" hidden>編集をやめる</button>
+        </div>
+        <ul class="row-list" id="gList"></ul>
+      </div>
+    </section>
+
+    <!-- ⑤ カメラ確認・録画 -->
+    <section class="panel" id="secCam" aria-label="カメラ確認・録画">
+      <div class="panel-head"><span class="no">⑤</span>カメラ確認・録画<span class="sub">SELF VIEW / REC</span><button class="exp" title="全画面で表示">⛶ 全画面</button></div>
+      <div class="panel-body">
+        <p class="hint">本番前の映り・構図の確認と、PCカメラでの録画ができます。録画は映像＋マイクの音声で、動画ファイル（.webm）として保存されます。</p>
+        <div class="cambox mirror" id="camBox"><video id="camVideo" playsinline muted></video><span class="recdot">● REC</span></div>
+        <div class="tr-ops" style="margin-top:8px">
+          <button class="btn" id="camOpenBtn">カメラを開く</button>
+          <button class="btn" id="camStopBtn" disabled>停止</button>
+          <label><input type="checkbox" id="camMirror" checked /> 鏡表示</label>
+          <span class="pill" id="camPill">カメラ未接続</span>
+        </div>
+        <div class="tr-ops">
+          <button class="btn primary" id="camRecBtn" disabled>⏺ 録画開始</button>
+          <span class="pill" id="camRecPill">録画停止中</span>
+        </div>
+        <div class="tr-ops">
+          <label><input type="checkbox" id="camMicOn" checked /> マイクの音も入れる</label>
+          <label title="ON AIRの「収録開始」で録画を始め、「収録終了」で停止します（カメラを開いているときのみ）"><input type="checkbox" id="camLinkOnair" /> 収録開始と同時に録画</label>
+        </div>
+        <p class="hint" style="margin:0">保存は .webm（Chrome / Edge 推奨）。プレビューの鏡表示は確認用で、保存される映像は左右反転しません。録画中に「ミュート」を押すと、その間の音は無音で記録されます。</p>
+      </div>
+    </section>
+  </div>
+
+  <div class="col col-b">
+    <!-- ② 音声テキスト化 -->
+    <section class="panel" id="secTranscript" aria-label="音声テキスト化">
+      <div class="panel-head"><span class="no">②</span>音声テキスト化<span class="sub">LIVE TRANSCRIPT</span><button class="exp" title="全画面で表示">⛶ 全画面</button></div>
+      <div class="panel-body tr-wrap">
+        <p class="hint">マイクからの音声をリアルタイムで文字起こしします。誤変換はこの欄で直接直してから③AI回答・回答選択へ送るので、岩田さんの言葉がAIに正しく届いているか確認できます。</p>
+        <div class="tr-status">
+          <button class="btn primary" id="trToggle">🎤 文字起こしを開始</button>
+          <span class="pill" id="trPill">待機中</span>
+          <span class="hint" id="trCount" style="margin:0">0文字</span>
+          <span class="hint" style="margin:0">※ Chrome / Edge 推奨（マイク許可が必要）。非対応ブラウザでは下の欄に貼り付けて代用できます</span>
+        </div>
+        <div class="tr-mode">
+          <label title="ON AIRの「収録開始」を押した瞬間に、この文字起こしも始めます"><input type="checkbox" id="trLinkOnair" checked /> 収録開始と同時に文字起こしを始める</label>
+        </div>
+        <textarea id="trText" placeholder="ここに岩田さんの発言が文字起こしされていきます。直接編集もできます。"></textarea>
+        <div id="trInterim"></div>
+        <div class="tr-ops">
+          <button class="btn" id="trSendAll">全文を③AI回答・回答選択へ送る</button>
+          <button class="btn" id="trSendSel">選択部分を③AI回答・回答選択へ送る</button>
+          <button class="btn" id="trClear" style="margin-left:auto">文字起こしをクリア</button>
+        </div>
+        <div class="tr-ops">
+          <button class="btn primary" id="micRecBtn">🎙 録音開始</button>
+          <button class="btn" id="micMuteBtn">🎙 ミュート</button>
+          <span class="pill" id="micPill">マイク未接続</span>
+          <span class="hint" style="margin:0">接続したマイクを録音し、音声ファイル（.webm）で保存します</span>
+        </div>
+        <div class="tr-ops" id="mixRow">
+          <button class="btn primary" id="mixBtn">🔊 全体の音声を取り込む</button>
+          <span class="pill" id="mixPill">全体モード停止中</span>
+        </div>
+        <p class="hint" id="mixHint" style="margin:0">画面共有のダイアログで<b>「タブの音声を共有」にチェック</b>すると、マイクの声と、相手・動画・配信の音をまとめて15秒ごとに文字起こしします（⚙のGemini APIキーが必要／<b>イヤホン推奨</b>。スピーカーだと相手の声がマイクにも入って二重になります）。停止すると全体音声を.webmでも保存します。</p>
+      </div>
+    </section>
+
+    <!-- ③ AI回答・回答選択 -->
+    <section class="panel" id="secChat" aria-label="AI回答・回答選択">
+      <div class="panel-head"><span class="no">③</span>AI回答・回答選択<span class="sub">AI CAST</span><button class="exp" title="全画面で表示">⛶ 全画面</button></div>
+      <div class="panel-body">
+        <div id="chatLog" aria-live="polite"></div>
+        <div class="composer">
+          <textarea id="chatInput" placeholder="岩田さんの問いを入力（例：知名度の低い地域企業が、新卒学生に会うために最初に変えるべきことは？）"></textarea>
+          <div class="ops">
+            <button class="btn primary" id="sendBtn">送信</button>
+            <button class="btn" id="candBtn">候補を3案生成</button>
+            <label><input type="checkbox" id="withSearch" /> 検索しながら答える</label>
+            <label><input type="checkbox" id="ttsChk" /> AIの発言を読み上げる</label>
+            <button class="btn" id="clearChatBtn" style="margin-left:auto">会話をクリア</button>
+          </div>
+          <div class="chips">
+            <button class="mini qchip">学生目線で意見を</button>
+            <button class="mini qchip">反論して</button>
+            <button class="mini qchip">この地域向けに翻訳して</button>
+            <button class="mini qchip">進行台本に起こして</button>
+            <button class="mini qchip" id="guestDeep">ゲストの立場で質問して</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ④ Google検索 -->
+    <section class="panel" id="secSearch" aria-label="Google検索">
+      <div class="panel-head"><span class="no">④</span>Google検索<span class="sub">GOOGLE SEARCH</span><button class="exp" title="全画面で表示">⛶ 全画面</button></div>
+      <div class="panel-body">
+        <p class="hint">調べたい語を入れて「Google検索」を押すと、別タブで検索結果が開きます。見つけた情報は下のメモに貼り付けて、③AI回答・回答選択へ送れます。数字は「⑧ 数字・出典メモ」に残すと配信中に言い間違えません。</p>
+        <div class="search-row">
+          <input id="searchQuery" placeholder="例：地域企業 仕事体験 インターン 事例" />
+          <button class="btn primary" id="searchBtn">Google検索</button>
+        </div>
+        <div class="result" id="searchResult">
+          <textarea id="searchMemo" rows="6" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.6;resize:vertical" placeholder="検索で見つけた情報・出典URLをここにメモ（貼り付け）"></textarea>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          <button class="btn" id="toChatBtn" disabled>このメモを③AI回答・回答選択へ送る</button>
+          <button class="btn" id="summarizeBtn" disabled>メモをAIで要約して③へ</button>
+          <button class="btn" id="searchMemoClear">メモをクリア</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="col col-c">
+    <!-- ⑦ クリップマーカー -->
+    <section class="panel" id="secClips" aria-label="クリップマーカー">
+      <div class="panel-head"><span class="no">⑦</span>クリップマーカー<span class="sub">CLIP MARKS</span><button class="exp" title="全画面で表示">⛶ 全画面</button></div>
+      <div class="panel-body">
+        <p class="hint">配信中に <b>M</b> キー（または F8・上の🎬ボタン）を押すと、ON AIRのタイムコードを記録します。右の「+」は前のマークからの間隔＝切り出し尺の目安。入力欄にカーソルがあるときは反応しません。</p>
+        <div class="markbar">
+          <button class="btn primary" id="clipAdd">🎬 マークを打つ</button>
+          <span class="pill" id="clipPill">0件</span>
+          <button class="btn" id="clipClear" style="margin-left:auto">全消去</button>
+        </div>
+        <ul class="row-list" id="clipList"></ul>
+      </div>
+    </section>
+
+    <!-- ⑧ 数字・出典メモ -->
+    <section class="panel" id="secFacts" aria-label="数字・出典メモ">
+      <div class="panel-head"><span class="no">⑧</span>数字・出典メモ<span class="sub">NUMBERS / SOURCES</span><button class="exp" title="全画面で表示">⛶ 全画面</button></div>
+      <div class="panel-body">
+        <p class="hint">番組で言う数字はここに集約。数字・時点・出典をセットで残すと、配信中の言い間違いと概要欄の出典漏れを同時に防げます。</p>
+        <div class="fld" style="margin-bottom:6px"><label for="fFigure">数字（そのまま）</label><input id="fFigure" placeholder="例：正社員の人手不足感 50.6%" /></div>
+        <div class="form-grid c2">
+          <div class="fld"><label for="fAsOf">時点</label><input id="fAsOf" placeholder="例：2026年4月" /></div>
+          <div class="fld"><label for="fSource">出典（短く）</label><input id="fSource" placeholder="例：帝国データバンク" /></div>
+        </div>
+        <div class="fld" style="margin-bottom:6px"><label for="fUrl">URL</label><input id="fUrl" placeholder="https://..." /></div>
+        <div class="fld" style="margin-bottom:6px"><label for="fNote">補足（どこで使うか）</label><input id="fNote" placeholder="例：冒頭の問題提起で1つだけ使う" /></div>
+        <div class="btn-row"><button class="btn primary" id="fAdd">追加</button></div>
+        <ul class="row-list" id="fList"></ul>
+      </div>
+    </section>
+
+    <!-- ⑨ 事例カード -->
+    <section class="panel" id="secCases" aria-label="事例カード">
+      <div class="panel-head"><span class="no">⑨</span>事例カード<span class="sub">CASE CARDS</span><button class="exp" title="全画面で表示">⛶ 全画面</button></div>
+      <div class="panel-body">
+        <p class="hint">1社1枚でストック。企業名・規模・打ち手・結果数字・出典が揃っていれば、そのまま番組で話せます。</p>
+        <div class="form-grid c2">
+          <div class="fld"><label for="cName">企業名</label><input id="cName" placeholder="例：〇〇製作所（長野）" /></div>
+          <div class="fld"><label for="cSize">規模</label><input id="cSize" placeholder="例：従業員45名" /></div>
+        </div>
+        <div class="fld" style="margin-bottom:6px"><label for="cAction">打ち手</label><input id="cAction" placeholder="例：高校生の仕事体験を年4回に増やした" /></div>
+        <div class="fld" style="margin-bottom:6px"><label for="cResult">結果（数字）</label><input id="cResult" placeholder="例：応募3倍・3年定着8割" /></div>
+        <div class="fld" style="margin-bottom:6px"><label for="cSource">出典</label><input id="cSource" placeholder="例：2026年 中小企業白書 p.88" /></div>
+        <div class="btn-row">
+          <button class="btn primary" id="cAdd">追加</button>
+          <button class="btn" id="cCancel" hidden>編集をやめる</button>
+        </div>
+        <div id="caseList"></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <span id="footMode">接続状態：デモモード（設定で Gemini APIキーを保存すると実検索・実回答が有効）</span>
+  <span id="footModel"></span>
+  <span>コンソール v2</span>
+  <span>※ M：クリップマーク／数字は録る前に一次ソースで確認</span>
+  <span>※ AIの回答は出典を確認してから番組で使用してください</span>
+</footer>
+
+<dialog id="settingDlg">
+  <div class="modal-in">
+    <h3>⚙ 設定</h3>
+    <p>APIキーはこのブラウザ内にのみ保存され、外部送信は Gemini API への回答リクエストのみに使われます。キーは Google AI Studio で取得できます。</p>
+    <label for="keyInput" style="font-size:12px">Gemini APIキー</label>
+    <input id="keyInput" type="password" placeholder="AIza..." />
+    <label for="modelSel" style="font-size:12px">モデル</label>
+    <select id="modelSel">
+      <option value="gemini-3.8-flash">Gemini 3.8 Flash（標準・推奨）</option>
+      <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite（高速・軽量）</option>
+      <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
+      <option value="gemini-2.5-flash">Gemini 2.5 Flash（旧：新規キーでは使えないことがあります）</option>
+      <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite（旧）</option>
+    </select>
+    <div style="display:flex;align-items:center;gap:10px;margin:6px 0 10px">
+      <button class="btn" id="modelListBtn" type="button">このキーで使えるモデルを取得</button>
+      <span id="modelListOut" class="hint" style="margin:0"></span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <button class="btn" id="testBtn">接続テスト</button>
+      <span id="testOut" class="hint" style="margin:0"></span>
+    </div>
+    <div class="ops">
+      <button class="btn" id="dlgClose">閉じる</button>
+      <button class="btn primary" id="dlgSave">保存</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="bulkDlg">
+  <div class="modal-in">
+    <h3>📄 テキストからアジェンダ一括作成</h3>
+    <p>1行 = 1項目。先頭に数字を付けると、その番号順でアジェンダに反映します。</p>
+    <textarea id="bulkText" rows="8" placeholder="1.どこで採用がとまっているか
+2.国内外の事例を確認"></textarea>
+    <label for="bulkMin" style="font-size:12px">各項目の想定時間（分）</label>
+    <input id="bulkMin" type="number" min="1" max="60" value="5" />
+    <div style="display:flex;gap:16px;font-size:12.5px;color:var(--sub);margin-bottom:12px">
+      <label><input type="radio" name="bulkMode" value="replace" checked /> 入れ替え</label>
+      <label><input type="radio" name="bulkMode" value="append" /> 追加</label>
+    </div>
+    <div class="ops">
+      <button class="btn" id="bulkCancel">キャンセル</button>
+      <button class="btn primary" id="bulkApply">反映する</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="expandDlg">
+  <div class="exp-wrap">
+    <div class="exp-head"><b id="expTitle">全画面</b><button class="btn ghost" id="expClose">閉じる</button></div>
+    <div class="exp-body" id="expBody"></div>
+  </div>
+</dialog>
+
+<script>
+'use strict';
+/* ================= state & storage ================= */
+const LS_KEY='locaiyo_studio_v1';
+const store={ok:false,get(){try{const r=localStorage.getItem(LS_KEY);return r?JSON.parse(r):null}catch(e){return null}},
+  size:0,
+  set(v){try{const j=JSON.stringify(v);localStorage.setItem(LS_KEY,j);this.size=j.length;this.ok=true}catch(e){this.ok=false}}};
+let state={
+  apiKey:'', model:'gemini-3.8-flash', linkOnair:true,
+  camMic:true, camLinkOnair:false,
+  agenda:[
+    {id:1,title:'冒頭：今日のテーマと持ち帰り',minutes:2,memo:'',done:false,base:0,acc:0},
+    {id:2,title:'現状確認：どこで採用が止まっているか',minutes:6,memo:'',done:false,base:0,acc:0},
+    {id:3,title:'Google検索：国内外の事例を確認',minutes:7,memo:'',done:false,base:0,acc:0},
+    {id:4,title:'改善案を比較して、その場で直す',minutes:10,memo:'',done:false,base:0,acc:0},
+    {id:5,title:'まとめ：まず取り組むこと3つ',minutes:5,memo:'',done:false,base:0,acc:0}
+  ],
+  activeId:null, onair:false, onairStart:null, parked:[], chat:[], searches:[],
+  clips:[], facts:[], cases:[], questions:[], guests:[], presets:[], presetSeeded:false
+};
+(function load(){const s=store.get();if(s&&s.agenda)state=Object.assign(state,s);
+  if(!state.modelMigrated){state.modelMigrated=true;if(/^gemini-2\.5/.test(state.model||''))state.model='gemini-3.8-flash';}
+  ['clips','facts','cases','questions','guests','presets'].forEach(k=>{if(!Array.isArray(state[k]))state[k]=[];});
+  if(!state.presets.length&&!state.presetSeeded){state.presets=[defaultPreset()];state.presetSeeded=true;}})();
+let warnedSize=false,warnedFail=false;
+function save(){
+  store.set(state);
+  if(!store.ok){
+    if(!warnedFail){warnedFail=true;alert('ブラウザへの保存に失敗しました（容量超過またはプライベートモードの可能性）。「⬇ 書き出す」で内容を保存してください。');}
+  }else{
+    warnedFail=false;
+    if(store.size>3500000&&!warnedSize){warnedSize=true;alert('保存データが大きくなっています（約'+Math.round(store.size/1000)+'K文字／上限は約5M）。「⬇ 書き出す」で保存し、文字起こしをクリアすることをおすすめします。');}
+  }
+}
+
+/* ================= helpers ================= */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=s=>{s=Math.max(0,Math.floor(s));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');};
+function fileNameBase(){return ((state.appName||'ローカル採用会議 スタジオ').replace(/[\\\/:*?"<>|]/g,'_').trim())||'recording';}
+function stamp(){const d=new Date(),z=n=>String(n).padStart(2,'0');return d.getFullYear()+z(d.getMonth()+1)+z(d.getDate())+'_'+z(d.getHours())+z(d.getMinutes());}
+function stampSec(){const d=new Date(),z=n=>String(n).padStart(2,'0');return stamp()+'_'+z(d.getSeconds());}
+function dl(blob,name){const a=document.createElement('a');const u=URL.createObjectURL(blob);a.href=u;a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{a.remove();URL.revokeObjectURL(u);},1500);}
+function plainPaste(el){el.addEventListener('paste',e=>{e.preventDefault();const t=(e.clipboardData.getData('text')||'').replace(/\s+/g,' ');document.execCommand('insertText',false,t);});}
+function toastMsg(box,text,tag){box.innerHTML='';const c=document.createElement('div');c.className='card';
+  const h=document.createElement('h4');h.textContent=tag;c.appendChild(h);
+  const p=document.createElement('p');p.className='sum';p.textContent=text;c.appendChild(p);box.appendChild(c);}
+
+/* ================= ① agenda ================= */
+function itemElapsed(it){return it.acc+((state.activeId===it.id&&it.base)?(Date.now()-it.base)/1000:0);}
+function renderAgenda(){
+  const ul=$('agendaList');ul.innerHTML='';
+  if(!state.agenda.length){const li=document.createElement('li');li.className='empty';li.textContent='項目を追加、または「テキストから一括作成」してください';ul.appendChild(li);
+    $('chipRemain').textContent='未消化 0件／0分';return;}
+  const expanded=$('expBody').contains(ul);
+  const inc=state.agenda.filter(i=>!i.done);
+  const vis=expanded?state.agenda:(inc.length?inc.slice(0,6):state.agenda.slice(0,6));
+  vis.forEach(it=>{
+    const li=document.createElement('li');li.dataset.id=it.id;li.className='item'+(state.activeId===it.id?' active':'')+(it.done?' done':'');
+    const r1=document.createElement('div');r1.className='row1';
+    const cb=document.createElement('input');cb.type='checkbox';cb.checked=!!it.done;cb.setAttribute('aria-label','伝えた');
+    cb.onchange=()=>{it.done=cb.checked;if(it.done&&state.activeId===it.id){it.acc+=((Date.now()-it.base)/1000);it.base=0;state.activeId=null;}save();renderAgenda();};
+    const t=document.createElement('span');t.className='t';t.contentEditable='true';t.textContent=it.title;
+    t.onblur=()=>{const v=t.textContent.trim();if(v)it.title=v;t.textContent=it.title;save();};
+    t.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();t.blur();}});plainPaste(t);
+    const timer=document.createElement('span');const el=itemElapsed(it);
+    timer.className='timer'+((state.activeId===it.id&&el>it.minutes*60)?' over':'');
+    timer.textContent=fmt(el)+' / '+it.minutes+'分';
+    r1.append(cb,t,timer);li.appendChild(r1);
+    const memo=document.createElement('textarea');memo.className='memo';memo.placeholder='伝えたいポイント（メモ）';
+    memo.value=it.memo||'';memo.onblur=()=>{it.memo=memo.value;save();};li.appendChild(memo);
+    const ops=document.createElement('div');ops.className='item-ops';
+    const bGo=document.createElement('button');bGo.className='mini go';
+    bGo.textContent=state.activeId===it.id?'⏸ 一時停止':'▶ 開始';
+    bGo.onclick=()=>{if(state.activeId===it.id){it.acc+=((Date.now()-it.base)/1000);it.base=0;state.activeId=null;}
+      else{state.agenda.forEach(o=>{if(o.id!==it.id&&o.base){o.acc+=((Date.now()-o.base)/1000);o.base=0;}});state.activeId=it.id;it.base=Date.now();}
+      save();renderAgenda();};
+    const bPark=document.createElement('button');bPark.className='mini';bPark.textContent='↪ 脱線メモへ退避';
+    bPark.onclick=()=>{
+      if(it.base){it.acc+=((Date.now()-it.base)/1000);it.base=0;}
+      if(state.activeId===it.id)state.activeId=null;
+      state.parked.unshift({t:it.title,at:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),item:Object.assign({},it,{done:false,base:0})});
+      state.agenda=state.agenda.filter(o=>o.id!==it.id);
+      save();renderAgenda();renderParked();};
+    const bDel=document.createElement('button');bDel.className='mini';bDel.textContent='削除';
+    bDel.onclick=()=>{state.agenda=state.agenda.filter(o=>o.id!==it.id);if(state.activeId===it.id)state.activeId=null;save();renderAgenda();};
+    ops.append(bGo,bPark,bDel);li.appendChild(ops);ul.appendChild(li);
+  });
+  if(!expanded&&state.agenda.length>6){
+    const more=document.createElement('li');more.className='more-row';
+    const mb=document.createElement('button');mb.className='mini';
+    mb.textContent='全'+state.agenda.length+'件を表示 ⛶';
+    mb.onclick=()=>openExpand(document.querySelector('section[aria-label="アジェンダ"]'));
+    more.appendChild(mb);ul.appendChild(more);
+  }
+  const undone=state.agenda.filter(i=>!i.done);
+  const remMin=undone.reduce((s,i)=>s+Math.max(0,i.minutes-Math.floor(itemElapsed(i)/60)),0);
+  $('chipRemain').textContent='未消化 '+undone.length+'件／約'+remMin+'分';
+}
+function renderParked(){
+  const ul=$('parkedList');ul.innerHTML='';
+  if(!state.parked.length){const li=document.createElement('li');li.style.background='transparent';li.style.border='none';
+    li.textContent='退避した話題はありません';ul.appendChild(li);return;}
+  state.parked.forEach((p,i)=>{
+    const li=document.createElement('li');const sp=document.createElement('span');
+    sp.textContent=p.t+'（'+p.at+'）';li.appendChild(sp);
+    const b1=document.createElement('button');b1.className='mini';b1.textContent='アジェンダへ戻す';
+    b1.onclick=()=>{const max=Math.max(0,...state.agenda.map(a=>a.id));const src=p.item||{};
+      state.agenda.push({id:max+1,title:p.t,minutes:src.minutes||3,memo:src.memo||'',done:false,base:0,acc:src.acc||0});
+      state.parked.splice(i,1);save();renderAgenda();renderParked();};
+    const b2=document.createElement('button');b2.className='mini';b2.textContent='削除';
+    b2.onclick=()=>{state.parked.splice(i,1);save();renderParked();};
+    li.append(b1,b2);ul.appendChild(li);
+  });
+}
+$('addBtn').onclick=()=>{const v=$('newTitle').value.trim();if(!v)return;
+  const m=Math.max(1,parseInt($('newMin').value)||5);
+  const max=Math.max(0,...state.agenda.map(a=>a.id));
+  state.agenda.push({id:max+1,title:v,minutes:m,memo:'',done:false,base:0,acc:0});
+  $('newTitle').value='';save();renderAgenda();};
+$('parkBtn').onclick=()=>{const v=$('parkInput').value.trim();if(!v)return;
+  state.parked.unshift({t:v,at:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})});
+  $('parkInput').value='';save();renderParked();};
+$('newTitle').addEventListener('keydown',e=>{if(e.key==='Enter')$('addBtn').click();});
+$('parkInput').addEventListener('keydown',e=>{if(e.key==='Enter')$('parkBtn').click();});
+
+/* ================= full-screen expand ================= */
+let expRef=null;
+function openExpand(panel){
+  const body=panel.querySelector('.panel-body');
+  if(!body||expRef)return;
+  expRef={panel:panel,body:body};
+  $('expTitle').textContent=panel.getAttribute('aria-label')||'全画面';
+  $('expBody').appendChild(body);
+  if(body.contains($('agendaList')))renderAgenda();
+  $('expandDlg').showModal();
+}
+$('expandDlg').addEventListener('close',()=>{
+  if(expRef){expRef.panel.appendChild(expRef.body);
+    if(expRef.body.contains($('agendaList')))renderAgenda();
+    expRef=null;}
+});
+$('expClose').onclick=()=>$('expandDlg').close();
+document.querySelectorAll('.panel-head .exp').forEach(b=>{b.onclick=()=>openExpand(b.closest('section.panel'));});
+
+/* ================= bulk agenda from text ================= */
+$('bulkBtn').onclick=()=>{$('bulkText').value='';$('bulkDlg').showModal();};
+$('bulkCancel').onclick=()=>$('bulkDlg').close();
+$('bulkApply').onclick=()=>{
+  const lines=$('bulkText').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!lines.length){alert('1行以上入力してください');return;}
+  const min=Math.max(1,parseInt($('bulkMin').value)||5);
+  const mode=document.querySelector('input[name="bulkMode"]:checked').value;
+  let base=Math.max(0,...state.agenda.map(a=>a.id));
+  const items=lines.map((l,i)=>{
+    const m=l.match(/^(\d+)\s*[.、．)）:：]\s*(.+)$/);
+    const title=(m?m[2]:l).trim()||('項目'+(i+1));
+    return {id:base+1+i,title:title,minutes:min,memo:'',done:false,base:0,acc:0};
+  });
+  if(mode==='replace'){state.agenda=items;state.activeId=null;}
+  else state.agenda=state.agenda.concat(items);
+  save();renderAgenda();$('bulkDlg').close();
+};
+
+/* ================= editable app name ================= */
+const appNameEl=$('appName');
+appNameEl.textContent=state.appName||'ローカル採用会議 スタジオ';
+appNameEl.addEventListener('blur',()=>{const v=appNameEl.textContent.trim().slice(0,40)||'ローカル採用会議 スタジオ';
+  appNameEl.textContent=v;state.appName=v;save();});
+appNameEl.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();appNameEl.blur();}});plainPaste(appNameEl);
+
+/* ================= ON AIR clock ================= */
+function tick(){
+  if(state.onair&&state.onairStart){
+    $('onairClock').textContent=fmt((Date.now()-state.onairStart)/1000);
+  }
+  $('chipState').textContent=state.onair?(state.activeId!=null?'収録中':'収録中（項目未選択）'):'配信前';
+  const it=state.agenda.find(a=>a.id===state.activeId);
+  if(it){const el=itemElapsed(it);
+    const li=$('agendaList').querySelector('[data-id="'+it.id+'"]');
+    if(li){const tm=li.querySelector('.timer');tm.textContent=fmt(el)+' / '+it.minutes+'分';
+      tm.classList.toggle('over',el>it.minutes*60);}
+  }
+  requestAnimationFrame(()=>{});
+}
+setInterval(tick,1000);
+function applyOnairUI(){
+  $('onairBox').classList.toggle('live',!!state.onair);
+  $('onairLabel').textContent=state.onair?'ON AIR':'STAND BY';
+  $('onairBtn').textContent=state.onair?'収録終了':'収録開始';
+}
+$('onairBtn').onclick=()=>{
+  const starting=!state.onair;
+  if(starting){state.onair=true;state.onairStart=Date.now();
+    if(!state.activeId&&state.agenda.length){state.activeId=state.agenda.find(a=>!a.done)?.id||null;
+      const it=state.agenda.find(a=>a.id===state.activeId);if(it&&!it.base)it.base=Date.now();}
+    
+  }else{state.onair=false;state.activeId=null;
+    state.agenda.forEach(o=>{if(o.base){o.acc+=((Date.now()-o.base)/1000);o.base=0;}});}
+  save();applyOnairUI();renderAgenda();
+  if(starting){
+    if(state.linkOnair!==false&&!mixOn) startTranscribe();
+    if(state.camLinkOnair===true&&!camRecActive()){
+      if(camStream&&camStream.getVideoTracks().some(t=>t.readyState==='live')) startCamRec(true);
+      else setCamRecPill('mut','カメラ未接続のため自動録画はしません');
+    }
+  }else{
+    stopTranscribe();stopMix();
+    if(camRecAuto) stopCamRec();
+    else if(!camRecActive()&&$('camRecPill').textContent.indexOf('自動録画はしません')>=0) setCamRecPill('','録画停止中');
+  }
+};
+
+/* ================= Gemini API ================= */
+const API_BASE='https://generativelanguage.googleapis.com/v1beta/models/';
+function sysCast(){return 'あなたはビデオポッドキャスト「ローカル採用会議」（地域企業の採用課題と改善提案、新卒採用中心）のAIキャストです。岩田さんの地域新卒採用の議論に応答します。ルール:1)簡潔に、結論から。2)事実は出典を、推察は「推察」と明示。3)最後に「この地域・この会社の規模でどう実行するか」を一文で添える。4)採用成果を断定しない。' + guestBrief();}
+function geminiUrl(){return API_BASE+state.model+':generateContent';}
+async function geminiFetch(key,body){
+  const res=await fetch(geminiUrl(),{method:'POST',
+    headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body)});
+  if(!res.ok){const t=await res.text();throw new Error('api '+res.status+' '+t.slice(0,300));}
+  return res.json();
+}
+async function callGemini(body){
+  if(!state.apiKey)throw new Error('nokey');
+  return geminiFetch(state.apiKey,body);
+}
+function friendlyError(msg){
+  const m=String(msg);
+  if(m==='nokey')return 'APIキーが未設定です。⚙ 設定で保存してください。';
+  if(/Failed to fetch|NetworkError|network/i.test(m))return 'ネットワークに接続できません。Wi-Fi回線か、ブラウザの拡張機能（広告ブロッカー等）がAPI通信を止めている可能性があります。';
+  if(/ACCESS_TOKEN_TYPE_UNSUPPORTED/i.test(m))return 'このキーの種類がGemini APIで受け付けられていません。AI Studio（aistudio.google.com）で、プロジェクトに紐づく新しいキーを作り直してください。Vertex AI（Google Cloud）用のキーは使えません。';
+  if(/API_KEY_INVALID|API key not valid|api 401|UNAUTHENTICATED|invalid authentication/i.test(m))return 'APIキーが認証されませんでした。キーの前後に空白や改行が入っていないか、AI Studioで発行したキーか確認してください。';
+  if(/SERVICE_DISABLED|has not been used|is disabled/i.test(m))return 'このキーのプロジェクトで「Generative Language API」が有効でありません。AI Studioで発行したキーを使ってください。';
+  if(/PERMISSION_DENIED|api 403|restricted|referer/i.test(m))return 'キーにアクセス制限（HTTPリファラ制限・API制限など）がかかっている可能性があります。ローカル（file://）で開いている場合はリファラ制限に引っかかるため、制限を外すか localhost 配信にしてください。';
+  if(/api 404|NOT_FOUND|no longer available|not found|is not supported/i.test(m))return '選択中のモデルはこのキーで使えません（Gemini 2.5系は新しいキー・プロジェクトでは利用不可のことがあります）。⚙ 設定で「Gemini 3.8 Flash」か「3.5 Flash-Lite」を選ぶか、「このキーで使えるモデルを取得」を押してください。';
+  if(/quota|api 429|RESOURCE_EXHAUSTED/i.test(m))return '利用上限（クォータ）に達しました。しばらく待つか、別のモデル（flash-lite など）をお試しください。無料枠が0のモデルもあります。';
+  return m;
+}
+function extractText(data){const c=data?.candidates?.[0];return c?.content?.parts?.map(p=>p.text||'').join('').trim()||'';}
+function extractSources(data){
+  const g=data?.candidates?.[0]?.groundingMetadata;const out=[];
+  const chunks=g?.groundingChunks||[];
+  chunks.forEach(ch=>{const w=ch.web;if(w&&w.uri&&/^https:/.test(w.uri))out.push({title:w.title||w.uri,uri:w.uri});});
+  return out.filter((v,i,a)=>a.findIndex(x=>x.uri===v.uri)===i).slice(0,6);
+}
+
+/* ================= ④ Google search ================= */
+function doSearch(){
+  const q=$('searchQuery').value.trim();if(!q)return;
+  const url='https://www.google.com/search?hl=ja&q='+encodeURIComponent(q);
+  const w=window.open(url,'_blank','noopener');
+  if(!w){alert('ポップアップがブロックされました。ブラウザの設定で、このページのポップアップを許可してください。');return;}
+  state.searches.unshift({q,text:'',at:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})});save();
+}
+function syncMemoBtn(){const e=!$('searchMemo').value.trim();$('toChatBtn').disabled=e;$('summarizeBtn').disabled=e||!navigator.onLine;}
+$('searchBtn').onclick=doSearch;
+$('searchQuery').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();doSearch();}});
+$('searchMemo').value=state.searchMemo||'';syncMemoBtn();
+$('searchMemo').addEventListener('input',syncMemoBtn);
+$('searchMemo').addEventListener('blur',()=>{state.searchMemo=$('searchMemo').value;save();});
+$('searchMemoClear').onclick=()=>{$('searchMemo').value='';state.searchMemo='';save();syncMemoBtn();};
+$('summarizeBtn').onclick=()=>{
+  const memo=$('searchMemo').value.trim();if(!memo)return;
+  const q=$('searchQuery').value.trim();
+  $('chatInput').value='【Google検索メモ】'+(q?'検索語: '+q+'\n':'')+memo+'\n→ このメモを、事実と推察を分けて3〜5個の箇条書きで要約してください。メモにない情報は足さないでください。';
+  sendChat();};
+$('toChatBtn').onclick=()=>{
+  const memo=$('searchMemo').value.trim();if(!memo)return;
+  const q=$('searchQuery').value.trim();
+  const ta=$('chatInput');
+  ta.value=(ta.value?ta.value+'\n':'')+'【Google検索メモ】'+(q?'検索語: '+q+'\n':'')+memo+'\n→ これを踏まえて意見をください';
+  ta.focus();};
+
+/* ================= ③ AI回答・回答選択 (chat / candidates) ================= */
+function pushMsg(role,text,adopted,sys){
+  state.chat.push({role,text,adopted:!!adopted,sys:!!sys});save();renderChat();
+}
+function renderChat(){
+  const log=$('chatLog');log.innerHTML='';
+  if(!state.chat.length){const d=document.createElement('p');d.className='empty';
+    d.textContent='岩田さんの問いを入力してください。「候補を3案生成」→ 採用すると、その回答が番組のAI発言として確定します。';
+    log.appendChild(d);return;}
+  state.chat.forEach(m=>{
+    const d=document.createElement('div');d.className='msg '+(m.role==='user'?'iwata':'ai');
+    const w=document.createElement('span');w.className='who';
+    w.textContent=m.role==='user'?'岩田':'AIキャスト';d.appendChild(w);
+    const t=document.createElement('span');t.textContent=m.text;d.appendChild(t);
+    if(m.adopted){const r=document.createElement('span');r.className='rec-tag';r.textContent='✔採用';d.appendChild(r);}
+    log.appendChild(d);
+  });
+  log.scrollTop=log.scrollHeight;
+}
+function historyForApi(){
+  const h=state.chat.filter(m=>!m.sys).slice(-8);
+  while(h.length&&h[0].role!=='user')h.shift();
+  return h.map(m=>({role:m.role==='user'?'user':'model',parts:[{text:m.text}]}));
+}
+function candContents(lastQ){const h=historyForApi();
+  if(!h.length||h[h.length-1].role!=='user')h.push({role:'user',parts:[{text:lastQ}]});return h;}
+async function sendChat(){
+  const ta=$('chatInput');const q=ta.value.trim();if(!q)return;
+  if(!navigator.onLine){alert('オフラインです。Wi-Fi接続後に送信できます');return;}
+  ta.value='';pushMsg('user',q);
+  const withSearch=$('withSearch').checked;
+  const body={systemInstruction:{parts:[{text:sysCast()}]},contents:historyForApi()};
+  if(withSearch)body.tools=[{google_search:{}}];
+  await aiReply(body);
+}
+async function aiReply(body){
+  const log=$('chatLog');
+  const wait=document.createElement('div');wait.className='msg ai';wait.textContent='回答を作成中…';log.appendChild(wait);log.scrollTop=log.scrollHeight;
+  try{
+    if(!state.apiKey){await new Promise(r=>setTimeout(r,400));
+      wait.remove();pushMsg('model','（デモ応答）これは動作確認用の固定文です。⚙ 設定で Gemini APIキーを保存すると、実際のAI回答がここに表示されます。',false,true);return;}
+    const data=await callGemini(body);const text=extractText(data);
+    wait.remove();pushMsg('model',text||'（回答を取得できませんでした）',false,!text);
+  }catch(e){wait.remove();pushMsg('model','（エラー: '+friendlyError(e.message)+'）',false,true);}
+}
+async function genCandidates(){
+  if(!navigator.onLine){alert('オフラインです。Wi-Fi接続後に生成できます');return;}
+  const ta=$('chatInput');const q=ta.value.trim();
+  if(!q&&!state.chat.length){alert('まず問いを入力してください');return;}
+  if(q){ta.value='';pushMsg('user',q);}
+  const log=$('chatLog');const wait=document.createElement('div');wait.className='msg ai';wait.textContent='候補を3案、作成中…';log.appendChild(wait);log.scrollTop=log.scrollHeight;
+  const lastQ=q||state.chat.filter(m=>m.role==='user').slice(-1)[0]?.text||'';
+  if(!lastQ){wait.remove();alert('まず問いを入力してください');return;}
+  if(!state.apiKey){
+    await new Promise(r=>setTimeout(r,500));wait.remove();
+    const box=document.createElement('div');box.className='cands';
+    const demo=[['接点の整理','（デモ）APIキー設定後は、ここに実際の3案が表示されます。この欄は動作確認用のプレースホルダです。'],
+                ['学生への聞き取り','（デモ）採用ボタンを押すと、その案がAI発言として会話に確定します（③回答選択）。'],
+                ['事例調査','（デモ）不採用の案は薄くなって残ります。']];
+    demo.forEach(d=>{const c=document.createElement('div');c.className='cand dim';
+      c.innerHTML='<div class="ch"><span class="ang">'+esc(d[0])+'</span></div>';
+      const p=document.createElement('p');p.textContent=d[1];c.appendChild(p);box.appendChild(c);});
+    log.appendChild(box);log.scrollTop=log.scrollHeight;return;
+  }
+  try{
+    const body={systemInstruction:{parts:[{text:sysCast()+'\n3つの異なる角度から回答案を作り、JSONで返します。角度は互いに異なる切り口（例:接点設計/学生の実態/他社事例の応用）に。'}]},
+      contents:candContents(lastQ),
+      generationConfig:{responseMimeType:'application/json',
+        responseSchema:{type:'OBJECT',properties:{candidates:{type:'ARRAY',items:{type:'OBJECT',
+          properties:{angle:{type:'STRING'},text:{type:'STRING'}},required:['angle','text']}}},required:['candidates']}}};
+    const data=await callGemini(body);
+    let cands=[];
+    try{const j=JSON.parse(extractText(data));cands=(j.candidates||[]).slice(0,3);}catch(e){}
+    if(!cands.length){wait.textContent='候補の取得に失敗しました。 ';
+      const rb=document.createElement('button');rb.className='mini';rb.textContent='↻ もう一度生成';
+      rb.onclick=()=>{wait.remove();genCandidates();};wait.appendChild(rb);return;}
+    wait.remove();renderCandidateBox(cands);
+  }catch(e){wait.remove();pushMsg('model','（エラー: '+friendlyError(e.message)+'）',false,true);}
+}
+function renderCandidateBox(cands){
+  const log=$('chatLog');const box=document.createElement('div');box.className='cands';
+  cands.forEach((c,i)=>{
+    const el=document.createElement('div');el.className='cand';
+    const h=document.createElement('div');h.className='ch';
+    const ang=document.createElement('span');ang.className='ang';ang.textContent=c.angle||('案'+(i+1));
+    h.appendChild(ang);el.appendChild(h);
+    const p=document.createElement('p');p.textContent=c.text;el.appendChild(p);
+    const ops=document.createElement('div');ops.className='item-ops';
+    const b=document.createElement('button');b.className='mini done-b';b.textContent='✔ 採用してAI発言にする';
+    b.onclick=()=>{box.querySelectorAll('.cand').forEach(x=>x.classList.add('dim'));el.classList.remove('dim');el.classList.add('adopted');
+      pushMsg('model',c.text,true);box.remove();if($('ttsChk').checked)speak(c.text);};
+    const b2=document.createElement('button');b2.className='mini';b2.textContent='入力欄へ送る';
+    b2.onclick=()=>{$('chatInput').value=c.text;$('chatInput').focus();};
+    ops.append(b,b2);el.appendChild(ops);box.appendChild(el);
+  });
+  log.appendChild(box);log.scrollTop=log.scrollHeight;
+}
+$('sendBtn').onclick=sendChat;
+$('candBtn').onclick=genCandidates;
+$('clearChatBtn').onclick=()=>{state.chat=[];save();renderChat();};
+$('chatInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}});
+document.querySelectorAll('.qchip').forEach(b=>b.onclick=()=>{$('chatInput').value=b.textContent;$('chatInput').focus();});
+
+/* ================= ⑤ live transcript ================= */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let rec=null,listening=false,srWasRunning=false,srErrCount=0,srRetryTimer=null,micMuted=false;
+const SR_FATAL=['not-allowed','service-not-allowed','audio-capture','language-not-supported'];
+function setPill(mode,text){const p=$('trPill');p.className='pill'+(mode==='on'?' on':mode==='err'?' err':'');p.textContent=text;}
+function renderTr(){const ta=$('trText');ta.value=state.trText||'';$('trCount').textContent=(state.trText||'').length+'文字';}
+function setTrBtn(){$('trToggle').textContent=listening?'⏹ 停止':'🎤 文字起こしを開始';}
+function makeRec(){
+  const r=new SR();r.lang='ja-JP';r.continuous=true;r.interimResults=true;
+  r.onstart=()=>{setPill('on','聞き取り中…');};
+  r.onresult=e=>{srErrCount=0;let interim='';
+    for(let i=e.resultIndex;i<e.results.length;i++){const x=e.results[i];
+      if(x.isFinal){const t=x[0].transcript.trim();
+        if(t){state.trText=(state.trText?state.trText+'\n':'')+t;save();renderTr();$('trText').scrollTop=$('trText').scrollHeight;}}
+      else interim+=x[0].transcript;}
+    $('trInterim').textContent=interim;};
+  r.onerror=e=>{
+    if(e.error==='no-speech'||e.error==='aborted')return;
+    if(SR_FATAL.includes(e.error)){listening=false;srWasRunning=false;clearTimeout(srRetryTimer);setTrBtn();
+      setPill('err',e.error==='not-allowed'||e.error==='service-not-allowed'?'マイクへのアクセスが拒否されました（ブラウザ設定で許可してください）':'認識を続けられません: '+e.error);return;}
+    srErrCount++;setPill('err','認識エラー: '+e.error+'（自動で再試行します）');};
+  r.onend=()=>{$('trInterim').textContent='';
+    if(!listening){setTrBtn();if(!$('trPill').classList.contains('err'))setPill('',micMuted?'ミュート中（認識を一時停止）':'待機中');return;}
+    if(!navigator.onLine){listening=false;setTrBtn();setPill('err','オフラインのため停止しました。接続後に再開してください');return;}
+    if(srErrCount>=6){listening=false;setTrBtn();setPill('err','認識エラーが続いたため停止しました。原因を確認して再度開始してください');return;}
+    const delay=srErrCount?Math.min(10000,500*Math.pow(2,srErrCount-1)):0;
+    clearTimeout(srRetryTimer);
+    srRetryTimer=setTimeout(()=>{if(!listening)return;try{r.start();}catch(err){}},delay);};
+  return r;
+}
+function startTranscribe(){
+  if(!navigator.onLine){setPill('err','オフラインです。Wi-Fi接続後に開始してください');return false;}
+  if(!SR){setPill('err','このブラウザは音声認識に非対応です（Chrome / Edge をご使用ください）');return false;}
+  if(micMuted){setPill('err','ミュート中です。解除してから開始してください');return false;}
+  rec=rec||makeRec();srErrCount=0;listening=true;setTrBtn();
+  try{rec.start();setPill('on','開始しています…');}
+  catch(e){if(e.name!=='InvalidStateError'){listening=false;setTrBtn();setPill('err','開始できませんでした: '+e.message);return false;}}
+  return true;
+}
+function stopTranscribe(){listening=false;clearTimeout(srRetryTimer);try{rec&&rec.stop();}catch(e){}setTrBtn();}
+$('trToggle').onclick=()=>{
+  if(listening){stopTranscribe();setPill('','待機中');srWasRunning=false;return;}
+  startTranscribe();
+};
+$('trText').addEventListener('blur',()=>{state.trText=$('trText').value;save();$('trCount').textContent=state.trText.length+'文字';});
+$('trSendAll').onclick=()=>{const v=$('trText').value.trim();
+  if(!v){alert('文字起こしが空です');return;}
+  $('chatInput').value=($('chatInput').value?$('chatInput').value+'\n':'')+'【岩田さんの発言（文字起こし）】\n'+v;$('chatInput').focus();};
+$('trSendSel').onclick=()=>{const ta=$('trText');const v=ta.value.substring(ta.selectionStart,ta.selectionEnd).trim();
+  if(!v){alert('送る部分を選択してください');return;}
+  $('chatInput').value=($('chatInput').value?$('chatInput').value+'\n':'')+'【岩田さんの発言（文字起こし・抜粋）】\n'+v;$('chatInput').focus();};
+$('trClear').onclick=()=>{state.trText='';save();renderTr();$('trInterim').textContent='';};
+renderTr();
+$('trLinkOnair').checked=state.linkOnair!==false;
+$('trLinkOnair').onchange=()=>{state.linkOnair=$('trLinkOnair').checked;save();};
+
+/* ================= ② mic recording & mute ================= */
+let micStream=null,mediaRec=null,micChunks=[],micStart=0,micTimer=null,micLabel='';
+function setMicPill(mode,text){const p=$('micPill');p.className='pill'+(mode==='on'?' on':mode==='err'?' err':'');p.textContent=text;}
+function updateMicPill(){
+  if(mediaRec&&mediaRec.state!=='inactive'){
+    const t=fmt((Date.now()-micStart)/1000);
+    setMicPill(micMuted?'err':'on',(micMuted?'ミュート中 ':'録音中 ')+t+(micLabel?'（'+micLabel+'）':''));
+  }else setMicPill(micMuted?'err':'',micMuted?'ミュート中':'マイク未接続');
+}
+function endMicRec(){
+  clearInterval(micTimer);micTimer=null;
+  if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null;}
+  mediaRec=null;$('micRecBtn').textContent='🎙 録音開始';updateMicPill();
+}
+$('micRecBtn').onclick=async()=>{
+  if(mediaRec&&mediaRec.state!=='inactive'){mediaRec.stop();return;}
+  if(!window.MediaRecorder||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){setMicPill('err','このブラウザは録音に非対応です（https または localhost で開いてください）');return;}
+  try{micStream=await navigator.mediaDevices.getUserMedia({audio:true});}
+  catch(e){setMicPill('err','マイクを開けません: '+e.message);return;}
+  const tr=micStream.getAudioTracks()[0];micLabel=tr?tr.label:'';
+  micStream.getAudioTracks().forEach(t=>{t.enabled=!micMuted;});
+  const mime=['audio/webm;codecs=opus','audio/webm','audio/mp4'].find(m=>MediaRecorder.isTypeSupported(m))||'';
+  try{mediaRec=mime?new MediaRecorder(micStream,{mimeType:mime}):new MediaRecorder(micStream);}
+  catch(e){setMicPill('err','録音を開始できません: '+e.message);micStream.getTracks().forEach(t=>t.stop());micStream=null;return;}
+  micChunks=[];
+  const rc=mediaRec;
+  rc.ondataavailable=e=>{if(e.data&&e.data.size)micChunks.push(e.data);};
+  rc.onerror=e=>{setMicPill('err','録音エラー: '+((e.error&&e.error.message)||'不明'));};
+  rc.onstop=()=>{
+    const type=rc.mimeType||mime||'audio/webm';
+    const ext=type.indexOf('mp4')>=0?'m4a':'webm';
+    if(micChunks.length)dl(new Blob(micChunks,{type:type}),fileNameBase()+'_音声_'+stamp()+'.'+ext);
+    micChunks=[];endMicRec();};
+  rc.start(1000);micStart=Date.now();
+  $('micRecBtn').textContent='⏹ 録音停止';updateMicPill();
+  micTimer=setInterval(updateMicPill,1000);
+};
+$('micMuteBtn').onclick=()=>{
+  micMuted=!micMuted;
+  $('micMuteBtn').textContent=micMuted?'🎙 ミュート解除':'🎙 ミュート';
+  if(micStream)micStream.getAudioTracks().forEach(t=>{t.enabled=!micMuted;});
+  if(camOwnAudio&&camAudioStream)camAudioStream.getAudioTracks().forEach(t=>{t.enabled=!micMuted;});
+  if(micMuted){
+    srWasRunning=listening;
+    if(listening){stopTranscribe();setPill('','ミュート中（認識を一時停止）');}
+  }else{
+    const resume=srWasRunning;srWasRunning=false;
+    if(resume)startTranscribe();else if(!listening)setPill('','待機中');
+  }
+  updateMicPill();
+};
+
+/* ================= ⑥ overall-audio mode (mic + shared audio → Gemini) ================= */
+/* Web Speech はマイク入力しか扱えないため、共有音声まで含める場合は
+   「マイク＋共有音声」を1本に混ぜ、15秒ごとにWAVでGeminiへ送って文字起こしする。 */
+const MIX_RATE=16000, MIX_SEG=15;
+let mixOn=false,mixDisp=null,mixMic=null,mixAC=null,mixProc=null,mixDest=null,mixRec=null,
+    mixRecChunks=[],mixChunks=[],mixAccum=0,mixStartedAt=0,mixTimer=null,mixInflight=false;
+function setMixPill(mode,text){const p=$('mixPill');p.className='pill'+(mode==='on'?' on':mode==='err'?' err':'');p.textContent=text;}
+function appendTrLine(text,at){
+  const t=String(text||'').replace(/\s*\n+\s*/g,' ').trim();if(!t)return;
+  state.trText=(state.trText?state.trText+'\n':'')+((at?'['+at+'] ':'')+t);
+  save();renderTr();$('trText').scrollTop=$('trText').scrollHeight;
+}
+function concatF32(bufs){let n=0;for(const b of bufs)n+=b.length;const out=new Float32Array(n);let o=0;
+  for(const b of bufs){out.set(b,o);o+=b.length;}return out;}
+function encodeWav(samples,rate){
+  const len=samples.length,buf=new ArrayBuffer(44+len*2),v=new DataView(buf);
+  const wr=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
+  wr(0,'RIFF');v.setUint32(4,36+len*2,true);wr(8,'WAVE');wr(12,'fmt ');
+  v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,rate,true);v.setUint32(28,rate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);
+  wr(36,'data');v.setUint32(40,len*2,true);
+  let o=44;for(let i=0;i<len;i++){const s=Math.max(-1,Math.min(1,samples[i]));v.setInt16(o,s<0?s*0x8000:s*0x7FFF,true);o+=2;}
+  return new Blob([buf],{type:'audio/wav'});
+}
+function blobToB64(blob){return new Promise((res,rej)=>{const fr=new FileReader();
+  fr.onload=()=>{const s=String(fr.result);res(s.slice(s.indexOf(',')+1));};fr.onerror=()=>rej(new Error('read fail'));fr.readAsDataURL(blob);});}
+async function transcribeWav(blob){
+  const b64=await blobToB64(blob);
+  const data=await callGemini({contents:[{role:'user',parts:[
+    {text:'次の音声を日本語で文字起こししてください。出力は文字起こし本文だけ（前置き・見出し・要約・話者ラベル・タイムスタンプは書かない）。相づちや言い直しもそのまま残す。聞き取れない箇所は（不明）とする。'},
+    {inline_data:{mime_type:'audio/wav',data:b64}}
+  ]}],generationConfig:{temperature:0,maxOutputTokens:2048}});
+  return extractText(data);
+}
+async function flushMix(){
+  if(mixInflight||!mixChunks.length)return;
+  const rate=(mixAC&&mixAC.sampleRate)||MIX_RATE;
+  const samples=concatF32(mixChunks);mixChunks=[];mixAccum=0;
+  if(samples.length<rate*2)return;
+  mixInflight=true;
+  const at=fmt(Math.max(0,(Date.now()-mixStartedAt)/1000-samples.length/rate));
+  setMixPill('on','全体モード：文字起こし中…');
+  try{
+    const txt=await transcribeWav(encodeWav(samples,rate));
+    if(txt)appendTrLine(txt,at);
+    if(mixOn)setMixPill('on','全体モード：待機中（'+MIX_SEG+'秒ごとに文字起こし）');
+  }catch(e){
+    setMixPill('err','全体モード：'+friendlyError((e&&e.message)||String(e)));
+  }finally{mixInflight=false;}
+}
+async function startMix(){
+  if(mixOn)return;
+  if(!navigator.onLine){setMixPill('err','オフラインのため開始できません');return;}
+  if(!state.apiKey){setMixPill('err','⚙ 設定でGemini APIキーを保存すると使えます');return;}
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getDisplayMedia){setMixPill('err','このブラウザは画面共有に非対応です（Chrome / Edge、https または localhost で開いてください）');return;}
+  setMixPill('','共有するタブ／画面を選んでください…');
+  let disp;
+  try{disp=await navigator.mediaDevices.getDisplayMedia({video:true,audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});}
+  catch(e){setMixPill('err','共有がキャンセルされました');return;}
+  const at=disp.getAudioTracks();
+  if(!at.length){disp.getTracks().forEach(t=>t.stop());
+    setMixPill('err','音声が入っていません。ダイアログで「タブの音声を共有」にチェックしてください');return;}
+  let mic=null;
+  try{mic=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});}catch(e){}
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext;
+    mixAC=new AC({sampleRate:MIX_RATE});
+    if(mixAC.state==='suspended')await mixAC.resume();
+    mixProc=mixAC.createScriptProcessor(4096,1,1);
+    mixDest=mixAC.createMediaStreamDestination();
+    const zero=mixAC.createGain();zero.gain.value=0;
+    mixProc.connect(zero);zero.connect(mixAC.destination);   /* 0ゲインで処理だけ回す（音は出さない） */
+    const srcDisp=mixAC.createMediaStreamSource(new MediaStream(at));
+    srcDisp.connect(mixProc);srcDisp.connect(mixDest);
+    if(mic){const srcMic=mixAC.createMediaStreamSource(mic);srcMic.connect(mixProc);srcMic.connect(mixDest);}
+    mixProc.onaudioprocess=e=>{
+      if(!mixOn)return;
+      const d=e.inputBuffer.getChannelData(0);
+      mixChunks.push(new Float32Array(d));mixAccum+=d.length;
+    };
+    mixRecChunks=[];
+    try{
+      const mime=['audio/webm;codecs=opus','audio/webm','audio/mp4'].find(m=>MediaRecorder.isTypeSupported(m))||'';
+      mixRec=mime?new MediaRecorder(mixDest.stream,{mimeType:mime}):new MediaRecorder(mixDest.stream);
+      mixRec.ondataavailable=e=>{if(e.data&&e.data.size)mixRecChunks.push(e.data);};
+      mixRec.onstop=()=>{
+        if(mixRecChunks.length){
+          const type=(mixRec&&mixRec.mimeType)||mime||'audio/webm';
+          const ext=type.indexOf('mp4')>=0?'m4a':'webm';
+          dl(new Blob(mixRecChunks,{type:type}),fileNameBase()+'_全体音声_'+stamp()+'.'+ext);
+        }
+        mixRecChunks=[];
+      };
+      mixRec.start(1000);
+    }catch(e){mixRec=null;}
+    mixOn=true;mixStartedAt=Date.now();mixAccum=0;mixChunks=[];
+    mixDisp=disp;mixMic=mic;
+    at[0].addEventListener('ended',()=>{if(mixOn)stopMix();});
+    if(listening){stopTranscribe();setPill('','全体モード中（マイク文字起こしは停止）');}
+    $('mixBtn').textContent='⏹ 全体モード停止';
+    $('trToggle').disabled=true;
+    setMixPill('on','全体モード：待機中（'+MIX_SEG+'秒ごとに文字起こし）');
+    mixTimer=setInterval(()=>{if(mixOn&&!mixInflight&&mixAC&&mixAccum>=mixAC.sampleRate*MIX_SEG)flushMix();},1000);
+  }catch(e){
+    try{disp.getTracks().forEach(t=>t.stop());}catch(_){}
+    try{if(mic)mic.getTracks().forEach(t=>t.stop());}catch(_){}
+    try{if(mixAC)mixAC.close();}catch(_){}
+    mixAC=null;mixProc=null;mixDest=null;mixRec=null;mixOn=false;
+    setMixPill('err','開始できませんでした: '+((e&&e.message)||e));
+  }
+}
+async function stopMix(){
+  if(!mixOn){setMixPill('','全体モード停止中');return;}
+  mixOn=false;clearInterval(mixTimer);mixTimer=null;
+  $('mixBtn').disabled=true;setMixPill('','全体モード：仕上げ中…');
+  for(let i=0;i<40&&mixInflight;i++)await new Promise(r=>setTimeout(r,250));
+  try{await flushMix();}catch(e){}
+  try{if(mixProc)mixProc.disconnect();}catch(e){}
+  try{if(mixDisp)mixDisp.getTracks().forEach(t=>t.stop());}catch(e){}
+  try{if(mixMic)mixMic.getTracks().forEach(t=>t.stop());}catch(e){}
+  try{if(mixRec&&mixRec.state!=='inactive')mixRec.stop();}catch(e){}
+  const ac=mixAC;
+  mixAC=null;mixProc=null;mixDest=null;mixDisp=null;mixMic=null;mixChunks=[];mixAccum=0;
+  if(ac)setTimeout(()=>{try{ac.close();}catch(e){}} ,1200);
+  $('mixBtn').textContent='🔊 全体の音声を取り込む';
+  $('mixBtn').disabled=false;$('trToggle').disabled=false;
+  setMixPill('','全体モード停止中');
+}
+$('mixBtn').onclick=()=>{mixOn?stopMix():startMix();};
+
+/* ================= network gate (Wi-Fi) ================= */
+function applyNet(){
+  const on=navigator.onLine;
+  $('netStat').classList.toggle('off',!on);
+  $('netStatTxt').textContent=on?'ONLINE':'OFFLINE';
+  $('netBanner').classList.toggle('show',!on);
+  ['searchBtn','sendBtn','candBtn','withSearch'].forEach(id=>{$(id).disabled=!on;});syncMemoBtn();
+}
+window.addEventListener('online',applyNet);
+window.addEventListener('offline',applyNet);
+
+/* ================= ⑤ camera self-view & recording ================= */
+let camStream=null,aiSpeaking=false;
+let camRec=null,camChunks=[],camRecStart=0,camRecTimer=null,camRecAuto=false,camAudioStream=null,camOwnAudio=false;
+function setCamPill(mode,text){const p=$('camPill');p.className='pill'+(mode==='on'?' on':mode==='err'?' err':'');p.textContent=text;}
+function setCamRecPill(mode,text){const p=$('camRecPill');p.className='pill'+(mode==='on'?' on':mode==='err'?' err':mode==='mut'?' mut':'');p.textContent=text;}
+function camChunkBytes(){return camChunks.reduce((s,c)=>s+(c.size||0),0);}
+function camRecActive(){return !!(camRec&&camRec.state!=='inactive');}
+function updateCamRecPill(){
+  if(camRecActive()){
+    const el=Math.max(0,Math.floor((Date.now()-camRecStart)/1000));
+    setCamRecPill('on','● 録画中 '+fmt(el)+'・'+(camChunkBytes()/1048576).toFixed(1)+'MB');
+  }else setCamRecPill('','録画停止中');
+}
+async function openCamera(){
+  if(camStream&&camStream.getVideoTracks().some(t=>t.readyState==='live'))return true;
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){setCamPill('err','このブラウザはカメラに非対応です（https または localhost で開いてください）');return false;}
+  try{
+    camStream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720}},audio:false});
+    const v=$('camVideo');v.srcObject=camStream;await v.play().catch(()=>{});
+    $('camOpenBtn').disabled=true;$('camStopBtn').disabled=false;$('camRecBtn').disabled=false;
+    setCamPill('on','カメラ接続中');
+    return true;
+  }catch(e){setCamPill('err','カメラを開けません: '+e.message);return false;}
+}
+$('camOpenBtn').onclick=()=>{openCamera();};
+function releaseCamAudio(){
+  if(camOwnAudio&&camAudioStream){try{camAudioStream.getTracks().forEach(t=>t.stop());}catch(e){}}
+  camAudioStream=null;camOwnAudio=false;
+}
+function endCamRec(){
+  clearInterval(camRecTimer);camRecTimer=null;camRec=null;camRecAuto=false;
+  releaseCamAudio();
+  $('camBox').classList.remove('rec');
+  $('camRecBtn').textContent='⏺ 録画開始';
+  $('camRecBtn').disabled=!(camStream&&camStream.getVideoTracks().some(t=>t.readyState==='live'));
+  setCamRecPill('','録画停止中');
+}
+$('camStopBtn').onclick=()=>{
+  if(camRecActive()){try{camRec.stop();}catch(e){}}
+  if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null;}
+  $('camVideo').srcObject=null;$('camOpenBtn').disabled=false;$('camStopBtn').disabled=true;$('camRecBtn').disabled=true;
+  setCamPill('','カメラ未接続');
+  $('camBox').classList.remove('rec');
+  if(!camRecActive()){clearInterval(camRecTimer);camRecTimer=null;releaseCamAudio();}
+};
+async function startCamRec(auto){
+  if(camRecActive())return;
+  if(!window.MediaRecorder){setCamRecPill('err','このブラウザは録画に非対応です（https または localhost で開いてください）');return;}
+  if(!camStream){
+    if(auto)return;                       /* 自動録画はカメラが開いているときだけ */
+    if(!(await openCamera()))return;
+  }
+  let audioTrack=null;
+  if($('camMicOn').checked){
+    if(micStream&&micStream.getAudioTracks().some(t=>t.readyState==='live')){
+      audioTrack=micStream.getAudioTracks()[0];camOwnAudio=false;
+    }else if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){
+      try{
+        camAudioStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+        audioTrack=camAudioStream.getAudioTracks()[0];camOwnAudio=true;
+      }catch(e){setCamRecPill('err','マイクを開けません（映像のみで録画します）: '+e.message);}
+    }
+    if(audioTrack)audioTrack.enabled=!micMuted;
+  }
+  const tracks=camStream.getVideoTracks().slice();
+  if(audioTrack)tracks.push(audioTrack);
+  let recStream;
+  try{recStream=new MediaStream(tracks);}catch(e){recStream=camStream;}
+  const mime=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'].find(m=>MediaRecorder.isTypeSupported(m))||'';
+  try{camRec=mime?new MediaRecorder(recStream,{mimeType:mime,videoBitsPerSecond:2500000}):new MediaRecorder(recStream);}
+  catch(e){setCamRecPill('err','録画を開始できません: '+e.message);releaseCamAudio();return;}
+  camChunks=[];
+  const rc=camRec;
+  rc.ondataavailable=e=>{if(e.data&&e.data.size)camChunks.push(e.data);};
+  rc.onerror=e=>{setCamRecPill('err','録画エラー: '+((e.error&&e.error.message)||'不明'));};
+  rc.onstop=()=>{
+    const type=rc.mimeType||mime||'video/webm';
+    const ext=type.indexOf('mp4')>=0?'mp4':'webm';
+    if(camChunks.length)dl(new Blob(camChunks,{type:type}),fileNameBase()+'_カメラ_'+stampSec()+'.'+ext);
+    camChunks=[];
+    endCamRec();
+  };
+  try{rc.start(1000);}
+  catch(e){setCamRecPill('err','録画を開始できません: '+e.message);releaseCamAudio();camRec=null;return;}
+  camRecStart=Date.now();camRecAuto=!!auto;
+  $('camRecBtn').textContent='⏹ 録画停止';
+  $('camBox').classList.add('rec');
+  setCamRecPill('on','● 録画中 00:00・0.0MB');
+  camRecTimer=setInterval(updateCamRecPill,1000);
+}
+function stopCamRec(){if(camRecActive()){try{camRec.stop();}catch(e){}}}
+$('camRecBtn').onclick=()=>{if(camRecActive())stopCamRec();else startCamRec(false);};
+$('camMirror').onchange=()=>{$('camBox').classList.toggle('mirror',$('camMirror').checked);};
+$('camMicOn').checked=state.camMic!==false;
+$('camMicOn').onchange=()=>{state.camMic=$('camMicOn').checked;save();};
+$('camLinkOnair').checked=state.camLinkOnair===true;
+$('camLinkOnair').onchange=()=>{state.camLinkOnair=$('camLinkOnair').checked;save();};
+let voiceJa=null;
+function pickVoice(){const vs=speechSynthesis.getVoices();voiceJa=vs.find(v=>v.lang&&v.lang.startsWith('ja'))||null;}
+if('speechSynthesis' in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice;}
+function speak(text){
+  if(!('speechSynthesis' in window))return;
+  speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);
+  u.lang='ja-JP';if(voiceJa)u.voice=voiceJa;u.rate=1.05;
+  u.onstart=()=>{aiSpeaking=true;};
+  u.onend=()=>{aiSpeaking=false;};
+  u.onerror=()=>{aiSpeaking=false;};
+  speechSynthesis.speak(u);
+}
+
+/* ================= 共通：ID・時刻・AIへ送る ================= */
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+function onairElapsedSec(){return state.onair&&state.onairStart?Math.max(0,Math.floor((Date.now()-state.onairStart)/1000)):0;}
+function wallClock(){const d=new Date();return [d.getHours(),d.getMinutes(),d.getSeconds()].map(n=>String(n).padStart(2,'0')).join(':');}
+function sendToChat(text){const ta=$('chatInput');ta.value=(ta.value?ta.value+'\n':'')+text;ta.focus();}
+function copyText(text,btn){
+  const done=()=>{if(!btn)return;const o=btn.textContent;btn.textContent='✓ コピー';setTimeout(()=>{btn.textContent=o;},1200);};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(done).catch(()=>{});return;}
+  const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');done();}catch(e){}ta.remove();
+}
+
+/* ================= ⑦ クリップマーカー ================= */
+function addClip(){
+  const it=state.agenda.find(a=>a.id===state.activeId);
+  state.clips.push({id:uid(),at:onairElapsedSec(),pre:!state.onair,wall:wallClock(),item:it?it.title:'',note:''});
+  save();renderClips();
+  const b=$('markBtn');
+  if(b){b.classList.add('flash');setTimeout(()=>b.classList.remove('flash'),450);}
+  const p=$('clipPill');
+  if(p){p.className='pill on';}
+}
+function renderClips(){
+  const ul=$('clipList');if(!ul)return;
+  ul.innerHTML='';
+  const list=state.clips.slice().sort((a,b)=>a.at-b.at);
+  $('clipPill').textContent=list.length+'件';
+  $('clipPill').className='pill'+(list.length?' on':'');
+  $('markCount').textContent=list.length;
+  if(!list.length){
+    const li=document.createElement('li');li.className='empty';
+    li.style.border='none';li.style.background='transparent';
+    li.textContent='まだマークがありません。配信中に M キーで記録できます';
+    ul.appendChild(li);return;
+  }
+  let prev=null;
+  list.forEach(c=>{
+    const li=document.createElement('li');li.className='clip';
+    const tc=document.createElement('span');tc.className='tc';tc.textContent=c.pre?'配信前':fmt(c.at);
+    const d=document.createElement('span');d.className='delta';
+    d.textContent=(c.pre||prev==null)?'—':'+'+fmt(Math.max(0,c.at-prev));
+    const inp=document.createElement('input');
+    inp.value=c.note||'';
+    inp.placeholder=c.item?c.item:'メモ（任意）';
+    inp.setAttribute('aria-label','マークのメモ');
+    inp.onblur=()=>{c.note=inp.value;save();};
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();inp.blur();}});
+    const x=document.createElement('button');x.className='x';x.textContent='✕';x.title='このマークを削除';
+    x.onclick=()=>{state.clips=state.clips.filter(o=>o.id!==c.id);save();renderClips();};
+    li.append(tc,d,inp,x);ul.appendChild(li);
+    if(!c.pre)prev=c.at;
+  });
+}
+
+/* ================= ⑥ 想定質問リスト ================= */
+function renderQuestions(){
+  const ul=$('qList');if(!ul)return;
+  ul.innerHTML='';
+  if(!state.questions.length){
+    const li=document.createElement('li');li.className='empty';li.style.border='none';li.style.background='transparent';
+    li.textContent='まだありません。番組で聞きたいことを追加してください';ul.appendChild(li);return;
+  }
+  state.questions.forEach(q=>{
+    const li=document.createElement('li');if(q.asked)li.className='done';
+    const top=document.createElement('div');top.className='rl-top';
+    const cb=document.createElement('input');cb.type='checkbox';cb.checked=!!q.asked;cb.setAttribute('aria-label','聞いた');
+    cb.onchange=()=>{q.asked=cb.checked;save();renderQuestions();};
+    const t=document.createElement('input');t.className='main-t';t.value=q.text;
+    t.style.cssText='border:none;background:transparent;font:inherit;color:inherit;padding:1px 2px;min-width:0';
+    t.onblur=()=>{const v=t.value.trim();if(v){q.text=v;save();}else{t.value=q.text;}};
+    t.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();t.blur();}});
+    const tag=document.createElement('span');tag.className='tag'+(q.asked?' g':'');tag.textContent=q.to||'—';
+    top.append(cb,t,tag);li.appendChild(top);
+    const ops=document.createElement('div');ops.className='rl-ops';
+    const bAsk=document.createElement('button');bAsk.className='mini';bAsk.textContent='③へ投げる';
+    bAsk.onclick=()=>sendToChat('【'+(q.to||'')+'に聞く】'+q.text+'\n→ この問いへの答えを、番組で話せる形で3点に整理してください。');
+    const bDel=document.createElement('button');bDel.className='mini';bDel.textContent='削除';
+    bDel.onclick=()=>{state.questions=state.questions.filter(x=>x.id!==q.id);save();renderQuestions();};
+    ops.append(bAsk,bDel);li.appendChild(ops);ul.appendChild(li);
+  });
+}
+$('qAdd').onclick=()=>{
+  const v=$('qText').value.trim();if(!v){$('qText').focus();return;}
+  state.questions.push({id:uid(),text:v,to:$('qTo').value,asked:false});
+  $('qText').value='';save();renderQuestions();$('qText').focus();
+};
+$('qText').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('qAdd').click();}});
+
+/* ================= ⑧ 数字・出典メモ ================= */
+function factLine(f){
+  let s='【数字】'+f.figure;
+  if(f.asOf)s+='（'+f.asOf+'時点）';
+  if(f.source)s+='／出典: '+f.source;
+  if(f.url)s+=' '+f.url;
+  if(f.note)s+='／'+f.note;
+  return s;
+}
+function renderFacts(){
+  const ul=$('fList');if(!ul)return;
+  ul.innerHTML='';
+  if(!state.facts.length){
+    const li=document.createElement('li');li.className='empty';li.style.border='none';li.style.background='transparent';
+    li.textContent='番組で使う数字を、時点と出典セットで登録してください';ul.appendChild(li);return;
+  }
+  state.facts.forEach(f=>{
+    const li=document.createElement('li');
+    const top=document.createElement('div');top.className='rl-top';
+    const t=document.createElement('span');t.className='main-t';t.textContent=f.figure;
+    top.appendChild(t);li.appendChild(top);
+    const meta=[f.asOf,(f.source||'')].filter(Boolean).join(' / ');
+    if(meta){const s=document.createElement('div');s.className='rl-sub';s.textContent=meta;li.appendChild(s);}
+    if(f.url){const a=document.createElement('a');a.className='rl-sub';a.style.display='block';a.href=f.url;a.target='_blank';a.rel='noopener';a.textContent=f.url;li.appendChild(a);}
+    if(f.note){const n=document.createElement('div');n.className='rl-sub';n.textContent=f.note;li.appendChild(n);}
+    const ops=document.createElement('div');ops.className='rl-ops';
+    const b1=document.createElement('button');b1.className='mini';b1.textContent='③へ';
+    b1.onclick=()=>sendToChat(factLine(f)+'\n→ この数字を番組で使うなら、どう言えば誤解が少ないか提案してください（断定しない）。');
+    const b2=document.createElement('button');b2.className='mini';b2.textContent='コピー';
+    b2.onclick=()=>copyText(factLine(f),b2);
+    const b3=document.createElement('button');b3.className='mini';b3.textContent='削除';
+    b3.onclick=()=>{state.facts=state.facts.filter(x=>x.id!==f.id);save();renderFacts();};
+    ops.append(b1,b2,b3);li.appendChild(ops);ul.appendChild(li);
+  });
+}
+$('fAdd').onclick=()=>{
+  const figure=$('fFigure').value.trim();
+  if(!figure){$('fFigure').focus();return;}
+  state.facts.push({id:uid(),figure:figure,asOf:$('fAsOf').value.trim(),source:$('fSource').value.trim(),url:$('fUrl').value.trim(),note:$('fNote').value.trim()});
+  ['fFigure','fAsOf','fSource','fUrl','fNote'].forEach(id=>{$(id).value='';});
+  save();renderFacts();$('fFigure').focus();
+};
+['fFigure','fAsOf','fSource','fUrl','fNote'].forEach(id=>{
+  $(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('fAdd').click();}});
+});
+
+/* ================= ⑨ 事例カード ================= */
+let caseEditId=null;
+function caseFromForm(){
+  return {name:$('cName').value.trim(),size:$('cSize').value.trim(),action:$('cAction').value.trim(),result:$('cResult').value.trim(),source:$('cSource').value.trim()};
+}
+function clearCaseForm(){['cName','cSize','cAction','cResult','cSource'].forEach(id=>{$(id).value='';});caseEditId=null;
+  $('cAdd').textContent='追加';$('cCancel').hidden=true;}
+function fillCaseForm(c){$('cName').value=c.name||'';$('cSize').value=c.size||'';$('cAction').value=c.action||'';
+  $('cResult').value=c.result||'';$('cSource').value=c.source||'';
+  caseEditId=c.id;$('cAdd').textContent='更新';$('cCancel').hidden=false;$('cName').focus();}
+function caseText(c){
+  const L=['【事例】'+(c.name||'(社名未設定)')];
+  if(c.size)L.push('規模: '+c.size);
+  if(c.action)L.push('打ち手: '+c.action);
+  if(c.result)L.push('結果: '+c.result);
+  if(c.source)L.push('出典: '+c.source);
+  return L.join('\n');
+}
+function renderCases(){
+  const box=$('caseList');if(!box)return;
+  box.innerHTML='';
+  if(!state.cases.length){
+    const p=document.createElement('p');p.className='empty';p.textContent='まだカードがありません';box.appendChild(p);return;
+  }
+  state.cases.forEach(c=>{
+    const d=document.createElement('div');d.className='case-card';
+    const h=document.createElement('h5');h.textContent=c.name||'(社名未設定)';d.appendChild(h);
+    const meta=document.createElement('div');meta.className='meta';meta.textContent=[c.size,c.source].filter(Boolean).join(' ／ ');
+    if(meta.textContent)d.appendChild(meta);
+    [['打ち手',c.action],['結果',c.result]].forEach(pair=>{
+      if(!pair[1])return;
+      const kv=document.createElement('div');kv.className='kv';
+      const b=document.createElement('b');b.textContent=pair[0];kv.appendChild(b);
+      kv.appendChild(document.createTextNode(pair[1]));d.appendChild(kv);
+    });
+    const ops=document.createElement('div');ops.className='rl-ops';
+    const b1=document.createElement('button');b1.className='mini';b1.textContent='③へ';
+    b1.onclick=()=>sendToChat(caseText(c)+'\n→ この事例から、他の地域企業が真似できる要点を3つに絞ってください。');
+    const b2=document.createElement('button');b2.className='mini';b2.textContent='編集';
+    b2.onclick=()=>fillCaseForm(c);
+    const b3=document.createElement('button');b3.className='mini';b3.textContent='削除';
+    b3.onclick=()=>{state.cases=state.cases.filter(x=>x.id!==c.id);save();renderCases();};
+    ops.append(b1,b2,b3);d.appendChild(ops);box.appendChild(d);
+  });
+}
+$('cAdd').onclick=()=>{
+  const c=caseFromForm();
+  if(!c.name&&!c.action){$('cName').focus();return;}
+  if(caseEditId){
+    const ex=state.cases.find(x=>x.id===caseEditId);
+    if(ex)Object.assign(ex,c);
+  }else{
+    state.cases.push(Object.assign({id:uid()},c));
+  }
+  save();clearCaseForm();renderCases();
+};
+$('cCancel').onclick=()=>clearCaseForm();
+['cName','cSize','cAction','cResult','cSource'].forEach(id=>{
+  $(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('cAdd').click();}});
+});
+
+/* ================= ⑩ ゲスト ================= */
+let guestEditId=null;
+function clearGuestForm(){['gName','gKana','gTitle','gNote'].forEach(id=>{$(id).value='';});guestEditId=null;
+  $('gAdd').textContent='追加';$('gCancel').hidden=true;}
+function renderGuests(){
+  const ul=$('gList');if(!ul)return;
+  ul.innerHTML='';
+  if(!state.guests.length){
+    const li=document.createElement('li');li.className='empty';li.style.border='none';li.style.background='transparent';
+    li.textContent='登録すると、AIキャストに読み仮名つきで渡されます';ul.appendChild(li);return;
+  }
+  state.guests.forEach(g=>{
+    const li=document.createElement('li');
+    const top=document.createElement('div');top.className='rl-top';
+    const t=document.createElement('span');t.className='main-t';t.textContent=g.name;
+    const tag=document.createElement('span');tag.className='tag';tag.textContent=g.kana||'読み未設定';
+    top.append(t,tag);li.appendChild(top);
+    const sub=[g.title,g.note].filter(Boolean).join(' ／ ');
+    if(sub){const s=document.createElement('div');s.className='rl-sub';s.textContent=sub;li.appendChild(s);}
+    const ops=document.createElement('div');ops.className='rl-ops';
+    const b1=document.createElement('button');b1.className='mini';b1.textContent='③へ紹介';
+    b1.onclick=()=>sendToChat('【ゲスト紹介】'+g.name+(g.kana?'（'+g.kana+'）':'')+(g.title?'／'+g.title:'')+(g.note?'／'+g.note:'')+'\n→ 番組で使う紹介文を2パターン（短い/丁寧）作ってください。');
+    const b2=document.createElement('button');b2.className='mini';b2.textContent='編集';
+    b2.onclick=()=>{$('gName').value=g.name||'';$('gKana').value=g.kana||'';$('gTitle').value=g.title||'';$('gNote').value=g.note||'';
+      guestEditId=g.id;$('gAdd').textContent='更新';$('gCancel').hidden=false;$('gName').focus();};
+    const b3=document.createElement('button');b3.className='mini';b3.textContent='削除';
+    b3.onclick=()=>{state.guests=state.guests.filter(x=>x.id!==g.id);save();renderGuests();};
+    ops.append(b1,b2,b3);li.appendChild(ops);ul.appendChild(li);
+  });
+}
+$('gAdd').onclick=()=>{
+  const name=$('gName').value.trim();
+  if(!name){$('gName').focus();return;}
+  const g={name:name,kana:$('gKana').value.trim(),title:$('gTitle').value.trim(),note:$('gNote').value.trim()};
+  if(guestEditId){
+    const ex=state.guests.find(x=>x.id===guestEditId);
+    if(ex)Object.assign(ex,g);
+  }else{
+    state.guests.push(Object.assign({id:uid()},g));
+  }
+  save();clearGuestForm();renderGuests();
+};
+$('gCancel').onclick=()=>clearGuestForm();
+['gName','gKana','gTitle','gNote'].forEach(id=>{
+  $(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('gAdd').click();}});
+});
+$('guestDeep').onclick=()=>{
+  const g=state.guests[0];
+  $('chatInput').value=(g?'【'+g.name+'の立場で】':'【ゲストの立場で】')+'この話に納得していない取材先が、いちばん突っ込みたくなる点を3つ挙げてください。';
+  $('chatInput').focus();
+};
+
+/* ================= プリセット ================= */
+function defaultPreset(){
+  return {id:'preset-localsaiyo',name:'地方採用スタンダード',items:[
+    {title:'数字1つで問題提起（人手不足感・求人倍率）',minutes:5,memo:''},
+    {title:'詰まりの3層分解（知られない／伝わらない／動けない）',minutes:5,memo:''},
+    {title:'「雇用の流動性」の誤解をほどく',minutes:5,memo:''},
+    {title:'出戻り採用・副業兼業・二地域居住',minutes:5,memo:''},
+    {title:'採用角度を変える具体策（仕事体験・カジュアル面談・リファラル）',minutes:5,memo:''},
+    {title:'事例1社を数字で（失敗例も1つ）',minutes:5,memo:''},
+    {title:'反論コーナー（予算／大手／人がいない）',minutes:5,memo:''},
+    {title:'締め：明日やる1アクション＋視聴者への問い',minutes:5,memo:''}
+  ]};
+}
+function renderPresets(){
+  const sel=$('presetSel');if(!sel)return;
+  const cur=sel.value;sel.innerHTML='';
+  if(!state.presets.length){const o=document.createElement('option');o.value='';o.textContent='（プリセットなし）';sel.appendChild(o);return;}
+  state.presets.forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.name+'（'+p.items.length+'項目）';sel.appendChild(o);});
+  if(cur&&state.presets.some(p=>p.id===cur))sel.value=cur;
+}
+$('presetSave').onclick=()=>{
+  const name=$('presetName').value.trim();
+  if(!name){alert('プリセット名を入れてください');$('presetName').focus();return;}
+  if(!state.agenda.length){alert('保存するアジェンダがありません');return;}
+  const items=state.agenda.map(a=>({title:a.title,minutes:a.minutes,memo:a.memo||''}));
+  const ex=state.presets.find(p=>p.name===name);
+  if(ex){if(!confirm('同名のプリセット「'+name+'」を上書きしますか？'))return;ex.items=items;}
+  else state.presets.push({id:uid(),name:name,items:items});
+  $('presetName').value='';save();renderPresets();
+};
+$('presetLoad').onclick=()=>{
+  const p=state.presets.find(x=>x.id===$('presetSel').value);
+  if(!p)return;
+  if(state.agenda.length&&!confirm('いまのアジェンダを「'+p.name+'」で置き換えます。よろしいですか？'))return;
+  state.agenda=p.items.map((it,i)=>({id:i+1,title:it.title,minutes:it.minutes||5,memo:it.memo||'',done:false,base:0,acc:0}));
+  state.activeId=null;save();renderAgenda();
+};
+$('presetDel').onclick=()=>{
+  const p=state.presets.find(x=>x.id===$('presetSel').value);
+  if(!p)return;
+  if(!confirm('プリセット「'+p.name+'」を削除しますか？'))return;
+  state.presets=state.presets.filter(x=>x.id!==p.id);save();renderPresets();
+};
+
+/* ================= ⑦ マーク用キーボード & ヘッダーボタン ================= */
+$('markBtn').onclick=()=>addClip();
+$('clipAdd').onclick=()=>addClip();
+$('clipClear').onclick=()=>{
+  if(!state.clips.length)return;
+  if(!confirm('マークを全消去しますか？'))return;
+  state.clips=[];save();renderClips();
+};
+document.addEventListener('keydown',e=>{
+  const t=e.target;
+  const typing=t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable);
+  if(typing)return;
+  if((e.key==='m'||e.key==='M'||e.key==='F8')&&!e.ctrlKey&&!e.metaKey&&!e.altKey){
+    e.preventDefault();addClip();
+  }
+});
+
+/* ================= export & settings ================= */
+$('exportBtn').onclick=()=>{
+  const L=[];L.push((state.appName||'ローカル採用会議 スタジオ')+'（収録メモ）');L.push('テーマ: '+($('epTitle').value||'(未設定)'));
+  L.push('日時: '+new Date().toLocaleString('ja-JP'));L.push('');
+  L.push('■ アジェンダ（✔=伝えた）');
+  state.agenda.forEach(a=>{L.push((a.done?'✔':'□')+' '+a.title+'（'+a.minutes+'分／使用'+fmt(itemElapsed(a))+'）'+(a.memo?'\n   メモ: '+a.memo:''));});
+  L.push('');L.push('■ 脱線メモ');
+  if(state.parked.length)state.parked.forEach(p=>L.push('・'+p.t+'（'+p.at+'）'));else L.push('(なし)');
+  L.push('');L.push('■ 検索記録（Google検索）');
+  if(state.searches.length)state.searches.forEach(s=>L.push('['+s.at+'] '+s.q));else L.push('(なし)');
+  L.push('');L.push('■ クリップマーカー（ON AIRタイムコード）');
+  if(state.clips.length){const cl=state.clips.slice().sort((a,b)=>a.at-b.at);let pv=null;
+    cl.forEach(c=>{L.push((c.pre?'配信前':'  '+fmt(c.at))+(c.pre||pv==null?'':'  +'+fmt(Math.max(0,c.at-pv)))+'  '+(c.note||c.item||''));if(!c.pre)pv=c.at;});}
+  else L.push('(なし)');
+  L.push('');L.push('■ 数字・出典');
+  if(state.facts.length)state.facts.forEach(f=>L.push('・'+factLine(f).replace(/^【数字】/,'')));else L.push('(なし)');
+  L.push('');L.push('■ 事例カード');
+  if(state.cases.length)state.cases.forEach(c=>L.push(caseText(c).replace(/\n/g,' / ')));else L.push('(なし)');
+  L.push('');L.push('■ 想定質問（✔=聞いた）');
+  if(state.questions.length)state.questions.forEach(q=>L.push((q.asked?'✔':'□')+' ['+(q.to||'')+'] '+q.text));else L.push('(なし)');
+  L.push('');L.push('■ ゲスト');
+  if(state.guests.length)state.guests.forEach(g=>L.push('・'+g.name+(g.kana?'（'+g.kana+'）':'')+(g.title?' / '+g.title:'')+(g.note?' / '+g.note:'')));else L.push('(なし)');
+  L.push('');L.push('■ 音声文字起こし');
+  L.push(state.trText?state.trText:'(なし)');
+  L.push('');L.push('■ 採用したAI発言');
+  const ad=state.chat.filter(m=>m.adopted);
+  if(ad.length)ad.forEach(m=>L.push('・'+m.text));else L.push('(なし)');
+  L.push('');L.push('■ 会話ログ');state.chat.forEach(m=>L.push((m.role==='user'?'岩田: ':'AI: ')+m.text));
+  dl(new Blob([L.join('\n')],{type:'text/plain;charset=utf-8'}),fileNameBase()+'_'+stamp()+'.txt');
+};
+function setModelSel(v){const sel=$('modelSel');
+  if(![...sel.options].some(o=>o.value===v)){const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);}
+  sel.value=v;}
+$('settingBtn').onclick=()=>{$('keyInput').value=state.apiKey;setModelSel(state.model);$('modelListOut').textContent='';$('settingDlg').showModal();};
+$('modelListBtn').onclick=async()=>{
+  const key=$('keyInput').value.replace(/\s+/g,'');
+  if(!key){$('modelListOut').textContent='キーを入力してから押してください';return;}
+  $('modelListOut').textContent='取得中…';
+  try{
+    const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',{headers:{'x-goog-api-key':key}});
+    if(!res.ok){const t=await res.text();throw new Error('api '+res.status+' '+t.slice(0,300));}
+    const j=await res.json();
+    const names=(j.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent'))
+      .map(m=>String(m.name).replace(/^models\//,''))
+      .filter(n=>/^gemini-/.test(n)&&!/(tts|image|live|embedding|robotics|transcribe|omni|computer-use|native-audio|banana|translate)/.test(n));
+    if(!names.length){$('modelListOut').textContent='使えるモデルが見つかりませんでした';return;}
+    const rank=n=>(/^gemini-3\.8-flash$/.test(n)?0:/flash-lite$/.test(n)?1:/flash$/.test(n)?2:3);
+    names.sort((a,b)=>rank(a)-rank(b)||b.localeCompare(a));
+    const cur=$('modelSel').value;const sel=$('modelSel');sel.innerHTML='';
+    names.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);});
+    sel.value=names.includes(cur)?cur:names[0];
+    $('modelListOut').textContent='✓ '+names.length+'件取得。選んで「接続テスト」→「保存」してください';
+  }catch(e){$('modelListOut').textContent='✗ '+friendlyError(e.message);}
+};
+$('dlgClose').onclick=()=>$('settingDlg').close();
+$('dlgSave').onclick=()=>{state.apiKey=$('keyInput').value.replace(/\s+/g,'');state.model=$('modelSel').value;save();updateFoot();$('settingDlg').close();};
+$('testBtn').onclick=async()=>{
+  const key=$('keyInput').value.trim().replace(/\s+/g,'');
+  const model=$('modelSel').value;
+  if(!key){$('testOut').textContent='キーを入力してから押してください';return;}
+  $('testOut').textContent='テスト中…';
+  const saved=state.model;state.model=model;
+  try{
+    const data=await geminiFetch(key,{contents:[{role:'user',parts:[{text:'OK と返してください'}]}]});
+    $('testOut').textContent='✓ 接続OK（'+model+'）'+(extractText(data)?'':'（応答は空）');
+  }catch(e){$('testOut').textContent='✗ '+friendlyError(e.message);}
+  finally{state.model=saved;}
+};
+function updateFoot(){
+  $('footMode').textContent=state.apiKey?'接続状態：Gemini API 接続済み（実検索・実回答が有効）':'接続状態：デモモード（設定で Gemini APIキーを保存すると実検索・実回答が有効）';
+  $('footModel').textContent='モデル: '+state.model;
+}
+$('epTitle').value=state.epTitle||'';$('epTitle').onblur=()=>{state.epTitle=$('epTitle').value;save();};
+renderAgenda();renderParked();renderChat();
+renderClips();renderFacts();renderCases();renderQuestions();renderGuests();renderPresets();
+updateFoot();applyNet();applyOnairUI();tick();
+</script>
+</body>
+</html>
