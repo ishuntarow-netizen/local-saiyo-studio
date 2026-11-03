@@ -346,6 +346,7 @@
           <button class="btn" id="candBtn">候補を3案生成</button>
           <label><input type="checkbox" id="withSearch" /> 検索しながら答える</label>
           <label><input type="checkbox" id="ttsChk" /> AIの発言を読み上げる</label>
+          <button class="btn" id="ttsStopBtn">読み上げ停止</button>
           <button class="btn" id="clearChatBtn" style="margin-left:auto">会話をクリア</button>
         </div>
         <div class="chips">
@@ -435,6 +436,24 @@
       <button class="btn" id="modelListBtn" type="button">このキーで使えるモデルを取得</button>
       <span id="modelListOut" class="hint" style="margin:0"></span>
     </div>
+    <label for="ttsEngineSel" style="font-size:12px">読み上げ音声の品質</label>
+    <select id="ttsEngineSel">
+      <option value="browser">標準（無料・即時）</option>
+      <option value="gemini">Gemini TTS（高品質・人間らしいテンポ）</option>
+    </select>
+    <label for="ttsVoiceSel" style="font-size:12px">声（Gemini TTS使用時）</label>
+    <select id="ttsVoiceSel">
+      <option value="Kore">Kore（落ち着き・はっきり）</option>
+      <option value="Sulafat">Sulafat（あたたかい）</option>
+      <option value="Achird">Achird（フレンドリー）</option>
+      <option value="Charon">Charon（情報を伝える）</option>
+      <option value="Leda">Leda（若々しい）</option>
+      <option value="Puck">Puck（明るい）</option>
+      <option value="Aoede">Aoede（軽やか）</option>
+      <option value="Zubenelgenubi">Zubenelgenubi（カジュアル）</option>
+    </select>
+    <label for="ttsRateR" style="font-size:12px">話速（標準音声のみ）: <span id="ttsRateV">1.0</span></label>
+    <input id="ttsRateR" type="range" min="0.8" max="1.3" step="0.05" value="1.0" style="width:100%" />
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
       <button class="btn" id="testBtn">接続テスト</button>
       <span id="testOut" class="hint" style="margin:0"></span>
@@ -1615,6 +1634,7 @@ async function aiReply(body){
       wait.remove();pushMsg('model','（デモ応答）これは動作確認用の固定文です。⚙ 設定で Gemini APIキーを保存すると、実際のAI回答がここに表示されます。',false,true);return;}
     const data=await callGemini(body);const text=extractText(data);
     wait.remove();pushMsg('model',text||'（回答を取得できませんでした）',false,!text);
+    if(text&&$('ttsChk').checked)speak(text);
   }catch(e){wait.remove();pushMsg('model','（エラー: '+friendlyError(e.message)+'）',false,true);}
 }
 async function genCandidates(){
@@ -1873,15 +1893,65 @@ $('camMirror').onchange=()=>{$('camBox').classList.toggle('mirror',$('camMirror'
 let voiceJa=null;
 function pickVoice(){const vs=speechSynthesis.getVoices();voiceJa=vs.find(v=>v.lang&&v.lang.startsWith('ja'))||null;}
 if('speechSynthesis' in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice;}
-function speak(text){
-  if(!('speechSynthesis' in window))return;
-  speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);
-  u.lang='ja-JP';if(voiceJa)u.voice=voiceJa;u.rate=1.05;
-  u.onstart=()=>{aiSpeaking=true;};
-  u.onend=()=>{aiSpeaking=false;};
-  u.onerror=()=>{aiSpeaking=false;};
-  speechSynthesis.speak(u);
+let geminiAudio=null,geminiAudioURL=null;
+function cleanForTTS(t){return String(t).replace(/\*\*/g,'').replace(/^[-\u30fb\u30fb\u2022\u25cf]\s*/gm,'').replace(/^#+\s*/gm,'').replace(/[\u3010][^\u3011]*[\u3011]/g,'').replace(/\n{2,}/g,'\n').trim();}
+function splitSentences(t){return t.replace(/([\u3002\uff01\uff1f!?])\s*/g,'$1\u0001').split('\u0001').filter(Boolean);}
+function stopAllSpeech(){
+  if('speechSynthesis' in window)speechSynthesis.cancel();
+  if(geminiAudio){try{geminiAudio.pause();}catch(e){}geminiAudio=null;}
+  aiSpeaking=false;
 }
+function speakBrowser(text){
+  if(!('speechSynthesis' in window))return;
+  speechSynthesis.cancel();
+  const rate=parseFloat(state.ttsRate)||1.0;
+  const sents=splitSentences(cleanForTTS(text));let i=0;
+  const next=()=>{
+    if(i>=sents.length){aiSpeaking=false;return;}
+    const u=new SpeechSynthesisUtterance(sents[i++]);
+    u.lang='ja-JP';if(voiceJa)u.voice=voiceJa;u.rate=rate;
+    u.onstart=()=>{aiSpeaking=true;};
+    u.onend=()=>{setTimeout(next,180);};
+    u.onerror=()=>{aiSpeaking=false;};
+    speechSynthesis.speak(u);
+  };
+  next();
+}
+async function speakGemini(text){
+  const style='Speaks Japanese as a calm, friendly radio co-host. Natural, unhurried human pacing with brief thoughtful pauses between ideas.';
+  const res=await fetch('https://generativelanguage.googleapis.com/v1beta/interactions',{
+    method:'POST',
+    headers:{'x-goog-api-key':state.apiKey,'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'gemini-3.8-flash-tts',
+      input:[{type:'user_input',content:[{type:'text',text:cleanForTTS(text),annotations:[{type:'speech_metadata',style:style}]}]}],
+      response_format:{type:'audio'},
+      generation_config:{speech_config:[{voice:state.ttsVoice||'Kore'}]}
+    })
+  });
+  if(!res.ok){const t=await res.text();throw new Error('api '+res.status+' '+t.slice(0,200));}
+  const j=await res.json();let b64='';
+  (j.steps||[]).forEach(s=>{(s.content||[]).forEach(c=>{if(c.type==='audio'&&c.data)b64=c.data;});});
+  if(!b64)throw new Error('audio-empty');
+  const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
+  if(geminiAudioURL)URL.revokeObjectURL(geminiAudioURL);
+  geminiAudioURL=URL.createObjectURL(new Blob([bin],{type:'audio/wav'}));
+  geminiAudio=new Audio(geminiAudioURL);
+  aiSpeaking=true;
+  geminiAudio.onended=()=>{aiSpeaking=false;};
+  geminiAudio.onerror=()=>{aiSpeaking=false;};
+  await geminiAudio.play();
+}
+function speak(text){
+  stopAllSpeech();
+  if(state.ttsEngine==='gemini'&&state.apiKey){
+    speakGemini(text).catch(()=>{
+      speakBrowser(text);
+      pushMsg('model','（Gemini TTSで音声化できなかったため、標準音声で読み上げました）',false,true);
+    });
+  } else speakBrowser(text);
+}
+$('ttsStopBtn').onclick=stopAllSpeech;
 
 /* ================= export & settings ================= */
 function buildExportText(audioInfo){
@@ -2065,6 +2135,11 @@ function meterOnTrStop(){ meterAutoStopIfIdle(); }
 function meterOnOnair(){ if(state.onair){if(!micStream)meterAutoStart();}else meterAutoStopIfIdle(); }
 meters.setMuted(micMuted);
 
+if(!state.ttsEngine)state.ttsEngine='browser';if(!state.ttsVoice)state.ttsVoice='Kore';if(!state.ttsRate)state.ttsRate=1.0;
+$('ttsEngineSel').value=state.ttsEngine;$('ttsVoiceSel').value=state.ttsVoice;$('ttsRateR').value=state.ttsRate;$('ttsRateV').textContent=state.ttsRate;
+$('ttsEngineSel').onchange=()=>{state.ttsEngine=$('ttsEngineSel').value;save();};
+$('ttsVoiceSel').onchange=()=>{state.ttsVoice=$('ttsVoiceSel').value;save();};
+$('ttsRateR').oninput=()=>{state.ttsRate=parseFloat($('ttsRateR').value);$('ttsRateV').textContent=state.ttsRate.toFixed(2);save();};
 renderAgenda();renderParked();renderChat();updateFoot();applyNet();applyOnairUI();tick();initLayout();updateMicPill();
 </script>
 </body>
